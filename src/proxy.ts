@@ -30,9 +30,11 @@ export async function proxy(request: NextRequest) {
     pathname === '/' ||
     pathname === '/login' ||
     /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname) ||
-    // TODO(issue 11): remover — /admin e /mentor liberados apenas na fase de protótipo
+    // TODO(issue 11): remover — /admin, /mentor e rotas do espaço liberadas apenas na fase de protótipo
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/mentor')
+    pathname.startsWith('/mentor') ||
+    /^\/[^/]+$/.test(pathname) ||
+    /^\/[^/]+\/aula\/[^/]+$/.test(pathname)
 
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL('/login', request.url))

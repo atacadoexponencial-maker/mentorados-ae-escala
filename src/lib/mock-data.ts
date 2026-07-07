@@ -77,6 +77,16 @@ export function formatarHoras(segundos: number): string {
   return `${h}h ${String(m).padStart(2, '0')}min`
 }
 
+export type MockProgressoRevendedor = {
+  concluidasIds: string[]
+  emAndamentoAulaId: string | null
+}
+
+export const mockProgressoRevendedor: MockProgressoRevendedor = {
+  concluidasIds: ['a1', 'a2'],
+  emAndamentoAulaId: 'a4',
+}
+
 export type MockRevendedor = {
   id: string
   nome: string
