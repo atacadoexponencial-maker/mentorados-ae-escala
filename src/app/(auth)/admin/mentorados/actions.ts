@@ -93,6 +93,13 @@ export async function cadastrarMentorado(
   return { ok: true, erro: null }
 }
 
+export async function desativarMentorado(espacoId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+  await admin.from('espacos').update({ ativo: false }).eq('id', espacoId)
+  revalidatePath('/admin/mentorados')
+}
+
 export async function editarMentorado(
   _estadoAnterior: EstadoMentorado,
   formData: FormData

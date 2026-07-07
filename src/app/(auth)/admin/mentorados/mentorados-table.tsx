@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { MoreHorizontal, Search } from 'lucide-react'
+import { desativarMentorado } from './actions'
 import type { MentoradoLinha } from './dados'
 import { EditarMentoradoDialog } from './editar-mentorado-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +38,7 @@ const statusVariant: Record<MentoradoLinha['status'], 'default' | 'secondary' | 
 export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }) {
   const [busca, setBusca] = useState('')
   const [editando, setEditando] = useState<MentoradoLinha | null>(null)
+  const [pendente, iniciarTransicao] = useTransition()
 
   const filtrados = mentorados.filter(
     (m) =>
@@ -94,7 +96,14 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setEditando(m)}>Editar</DropdownMenuItem>
-                        {m.status === 'ativo' && <DropdownMenuItem>Desativar</DropdownMenuItem>}
+                        {m.status === 'ativo' && (
+                          <DropdownMenuItem
+                            disabled={pendente}
+                            onClick={() => iniciarTransicao(() => desativarMentorado(m.id))}
+                          >
+                            Desativar
+                          </DropdownMenuItem>
+                        )}
                         {m.status === 'inativo' && <DropdownMenuItem>Reativar</DropdownMenuItem>}
                         {m.status === 'convite-pendente' && (
                           <DropdownMenuItem>Reenviar convite</DropdownMenuItem>
