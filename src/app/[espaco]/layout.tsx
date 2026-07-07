@@ -1,4 +1,4 @@
-import { getMockEspaco } from '@/lib/mock-data'
+import { getEspacoPorSlug } from '@/lib/espacos'
 
 export default async function EspacoLayout({
   children,
@@ -8,12 +8,12 @@ export default async function EspacoLayout({
   params: Promise<{ espaco: string }>
 }) {
   const { espaco } = await params
-  const dados = getMockEspaco(espaco)
+  const dados = await getEspacoPorSlug(espaco)
 
   // Slug inexistente: renderiza sem identidade — a página chama notFound()
   // e o not-found.tsx deste segmento assume.
-  const style = dados?.corPrimaria
-    ? ({ '--primary': dados.corPrimaria, '--ring': dados.corPrimaria } as React.CSSProperties)
+  const style = dados?.cor_primaria
+    ? ({ '--primary': dados.cor_primaria, '--ring': dados.cor_primaria } as React.CSSProperties)
     : undefined
 
   return (
