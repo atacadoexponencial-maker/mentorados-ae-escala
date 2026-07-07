@@ -110,7 +110,12 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
         </Table>
       </div>
 
-      <EditarMentoradoDialog mentorado={editando} onClose={() => setEditando(null)} />
+      {/* key remonta o dialog a cada linha editada — zera o estado da action anterior */}
+      <EditarMentoradoDialog
+        key={editando?.id ?? 'fechado'}
+        mentorado={editando}
+        onClose={() => setEditando(null)}
+      />
     </div>
   )
 }
