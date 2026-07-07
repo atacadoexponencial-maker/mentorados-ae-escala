@@ -29,9 +29,10 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/recuperar-senha' ||
     pathname === '/auth/callback' ||
     pathname === '/auth/confirm' ||
-    /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname)
+    /^\/[^/]+\/(login|primeiro-acesso|recuperar-senha)$/.test(pathname)
 
   if (!user && !isPublicRoute) {
     // Rotas de espaço voltam para o login do próprio espaço; equipe vai para /login

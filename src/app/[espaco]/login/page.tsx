@@ -26,7 +26,7 @@ export default async function LoginPage({
             <p className="text-sm text-muted-foreground">Acesse sua área de membros</p>
           </div>
         </div>
-        <LoginForm />
+        <LoginForm espacoSlug={dados.slug} />
       </div>
     </div>
   )

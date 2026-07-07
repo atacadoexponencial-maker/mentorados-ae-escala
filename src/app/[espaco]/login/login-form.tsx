@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { fazerLogin, type EstadoLogin } from './actions'
 import { Button } from '@/components/ui/button'
@@ -8,8 +9,9 @@ import { Label } from '@/components/ui/label'
 
 const estadoInicial: EstadoLogin = { erro: null }
 
-export function LoginForm() {
+export function LoginForm({ espacoSlug }: { espacoSlug?: string }) {
   const [estado, acao, pendente] = useActionState(fazerLogin, estadoInicial)
+  const linkRecuperar = espacoSlug ? `/${espacoSlug}/recuperar-senha` : '/recuperar-senha'
 
   return (
     <form action={acao} className="space-y-5">
@@ -30,7 +32,9 @@ export function LoginForm() {
         {pendente ? 'Entrando…' : 'Entrar'}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        <span className="cursor-pointer underline">Esqueci minha senha</span>
+        <Link href={linkRecuperar} className="underline">
+          Esqueci minha senha
+        </Link>
       </p>
     </form>
   )
