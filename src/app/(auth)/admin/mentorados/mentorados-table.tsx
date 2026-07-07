@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { MoreHorizontal, Search } from 'lucide-react'
-import { desativarMentorado, reativarMentorado } from './actions'
+import { desativarMentorado, reativarMentorado, reenviarConviteMentorado } from './actions'
 import type { MentoradoLinha } from './dados'
 import { EditarMentoradoDialog } from './editar-mentorado-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -113,7 +113,12 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
                           </DropdownMenuItem>
                         )}
                         {m.status === 'convite-pendente' && (
-                          <DropdownMenuItem>Reenviar convite</DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={pendente}
+                            onClick={() => iniciarTransicao(() => reenviarConviteMentorado(m.id))}
+                          >
+                            Reenviar convite
+                          </DropdownMenuItem>
                         )}
                         <DropdownMenuItem>Ver dashboard</DropdownMenuItem>
                       </DropdownMenuContent>

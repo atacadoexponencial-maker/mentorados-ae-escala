@@ -66,9 +66,14 @@ export async function cadastrarMentorado(
   })
   if (erroConvite || !convite.user) {
     const jaExiste = erroConvite?.message.toLowerCase().includes('already')
+    const limiteEmail = erroConvite?.code === 'over_email_send_rate_limit'
     return {
       ok: false,
-      erro: jaExiste ? 'Este e-mail já está em uso' : 'Não foi possível criar o mentorado. Tente novamente.',
+      erro: jaExiste
+        ? 'Este e-mail já está em uso'
+        : limiteEmail
+          ? 'Limite de envio de e-mails por hora atingido. Tente novamente em 1 hora.'
+          : 'Não foi possível criar o mentorado. Tente novamente.',
     }
   }
 
@@ -104,6 +109,59 @@ export async function reativarMentorado(espacoId: string): Promise<void> {
   if (!(await exigirAdmin())) return
   const admin = createAdminClient()
   await admin.from('espacos').update({ ativo: true }).eq('id', espacoId)
+  revalidatePath('/admin/mentorados')
+}
+
+export async function reenviarConviteMentorado(espacoId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { data: espaco } = await admin
+    .from('espacos')
+    .select('slug, mentorado_user_id')
+    .eq('id', espacoId)
+    .maybeSingle()
+  if (!espaco?.mentorado_user_id) return
+
+  const { data: usuario } = await admin.auth.admin.getUserById(espaco.mentorado_user_id)
+  // Só reenvia para quem nunca logou (convite pendente)
+  if (!usuario.user || usuario.user.last_sign_in_at) return
+
+  const email = usuario.user.email!
+  const nome = (usuario.user.user_metadata?.nome as string | undefined) ?? null
+
+  // Supabase não re-convida usuário existente: remove o pendente e convida de novo
+  await admin.auth.admin.deleteUser(espaco.mentorado_user_id)
+
+  const cabecalhos = await headers()
+  const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
+  const { data: convite, error } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { nome },
+    redirectTo: `${origem}/${espaco.slug}/primeiro-acesso`,
+  })
+
+  // Convite falhou (ex.: limite de e-mails/hora): recria o usuário pendente
+  // sem enviar e-mail, para o espaço não ficar sem dono.
+  const novoUsuario = convite?.user
+    ? convite.user
+    : (
+        await admin.auth.admin.createUser({
+          email,
+          user_metadata: { nome },
+          email_confirm: false,
+        })
+      ).data.user
+  if (error && !convite?.user) {
+    console.error('Reenvio de convite falhou (usuário recriado sem e-mail):', error.message)
+  }
+  if (!novoUsuario) {
+    revalidatePath('/admin/mentorados')
+    return
+  }
+
+  await admin.from('user_roles').insert({ user_id: novoUsuario.id, role: 'mentorado' })
+  await admin.from('espacos').update({ mentorado_user_id: novoUsuario.id }).eq('id', espacoId)
+
   revalidatePath('/admin/mentorados')
 }
 
