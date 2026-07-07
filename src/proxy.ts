@@ -29,7 +29,9 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
-    /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname)
+    /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname) ||
+    // TODO(issue 11): remover — /admin liberado apenas na fase de protótipo
+    pathname.startsWith('/admin')
 
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL('/login', request.url))
