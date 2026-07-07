@@ -49,3 +49,4 @@ issues/
 .env.local
 .env.*.local
 !.env.example
+.playwright-mcp/

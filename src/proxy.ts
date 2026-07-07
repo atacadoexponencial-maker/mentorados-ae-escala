@@ -29,6 +29,8 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/auth/callback' ||
+    pathname === '/auth/confirm' ||
     /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname)
 
   if (!user && !isPublicRoute) {
