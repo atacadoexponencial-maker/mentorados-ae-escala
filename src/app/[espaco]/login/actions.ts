@@ -42,9 +42,14 @@ export async function fazerLogin(
     // Espaço do revendedor vem do vínculo no banco (não do endereço digitado)
     const { data: revendedor } = await supabase
       .from('revendedores')
-      .select('id, espacos(slug)')
+      .select('id, status, espacos(slug)')
       .eq('user_id', auth.user.id)
       .maybeSingle()
+
+    if (revendedor?.status === 'inativo') {
+      await supabase.auth.signOut()
+      return { erro: 'Seu acesso foi revogado. Fale com seu mentor.' }
+    }
 
     const slug = (revendedor as { espacos?: { slug?: string } } | null)?.espacos?.slug
     if (slug) {
