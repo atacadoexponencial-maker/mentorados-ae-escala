@@ -15,6 +15,7 @@ export function LoginForm({ espacoSlug }: { espacoSlug?: string }) {
 
   return (
     <form action={acao} className="space-y-5">
+      <input type="hidden" name="espacoSlug" value={espacoSlug ?? ''} />
       <div className="space-y-2">
         <Label htmlFor="email">E-mail</Label>
         <Input id="email" name="email" type="email" placeholder="voce@exemplo.com" required />

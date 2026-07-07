@@ -12,6 +12,7 @@ export async function fazerLogin(
 ): Promise<EstadoLogin> {
   const email = String(formData.get('email') ?? '').trim()
   const senha = String(formData.get('senha') ?? '')
+  const espacoSlugDaPagina = String(formData.get('espacoSlug') ?? '').trim()
 
   const supabase = await createClient()
   const { data: auth, error } = await supabase.auth.signInWithPassword({
@@ -52,6 +53,13 @@ export async function fazerLogin(
     }
 
     const slug = (revendedor as { espacos?: { slug?: string } } | null)?.espacos?.slug
+
+    // Login feito pela página de um espaço que não é o dela → negado
+    if (espacoSlugDaPagina && slug && espacoSlugDaPagina !== slug) {
+      await supabase.auth.signOut()
+      return { erro: 'Você não faz parte deste espaço. Confira o endereço com seu mentor.' }
+    }
+
     if (slug) {
       // Registro de último acesso é escrita administrativa (RLS não permite update pelo próprio)
       const admin = createAdminClient()
