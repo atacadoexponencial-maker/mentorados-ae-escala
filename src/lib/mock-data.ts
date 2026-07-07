@@ -77,6 +77,24 @@ export function formatarHoras(segundos: number): string {
   return `${h}h ${String(m).padStart(2, '0')}min`
 }
 
+export type MockRevendedor = {
+  id: string
+  nome: string
+  email: string
+  whatsapp: string | null
+  status: 'ativo' | 'inativo' | 'convite-pendente'
+  ultimoAcesso: string | null
+}
+
+export const mockRevendedores: MockRevendedor[] = [
+  { id: 'r1', nome: 'Fernanda Alves', email: 'fernanda.alves@gmail.com', whatsapp: '(11) 98877-1234', status: 'ativo', ultimoAcesso: '2026-07-06T14:20:00' },
+  { id: 'r2', nome: 'Patrícia Gomes', email: 'pati.gomes@hotmail.com', whatsapp: null, status: 'ativo', ultimoAcesso: '2026-07-05T09:12:00' },
+  { id: 'r3', nome: 'Juliana Castro', email: 'ju.castro@gmail.com', whatsapp: '(21) 99654-8800', status: 'ativo', ultimoAcesso: '2026-06-28T19:45:00' },
+  { id: 'r4', nome: 'Renata Dias', email: 'renata.dias@yahoo.com.br', whatsapp: null, status: 'convite-pendente', ultimoAcesso: null },
+  { id: 'r5', nome: 'Camila Rocha', email: 'camila.rocha@gmail.com', whatsapp: '(31) 98211-4477', status: 'inativo', ultimoAcesso: '2026-05-14T11:03:00' },
+  { id: 'r6', nome: 'Beatriz Nunes', email: 'bia.nunes@gmail.com', whatsapp: null, status: 'ativo', ultimoAcesso: '2026-07-07T08:30:00' },
+]
+
 export type MockDashboardGlobal = {
   totais: {
     mentoradosAtivos: number
