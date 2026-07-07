@@ -70,6 +70,68 @@ export function formatarDuracao(segundos: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+export function formatarHoras(segundos: number): string {
+  const h = Math.floor(segundos / 3600)
+  const m = Math.floor((segundos % 3600) / 60)
+  if (h === 0) return `${m}min`
+  return `${h}h ${String(m).padStart(2, '0')}min`
+}
+
+export type MockDashboardGlobal = {
+  totais: {
+    mentoradosAtivos: number
+    revendedoresCadastrados: number
+    revendedoresQueAcessaram: number
+    tempoTotalSegundos: number
+    aulasConcluidas: number
+  }
+  ranking: {
+    marca: string
+    slug: string
+    revendedoresAtivos: number
+    tempoAssistidoSegundos: number
+    aulasConcluidas: number
+  }[]
+  porAula: {
+    aulaId: string
+    assistiram: number
+    percentualConclusao: number
+  }[]
+}
+
+export const mockDashboardGlobal: MockDashboardGlobal = {
+  totais: {
+    mentoradosAtivos: 2,
+    revendedoresCadastrados: 519,
+    revendedoresQueAcessaram: 342,
+    tempoTotalSegundos: 462_180,
+    aulasConcluidas: 1874,
+  },
+  ranking: [
+    {
+      marca: 'João Atacados',
+      slug: 'joao-atacados',
+      revendedoresAtivos: 437,
+      tempoAssistidoSegundos: 391_500,
+      aulasConcluidas: 1592,
+    },
+    {
+      marca: 'Maria Modas',
+      slug: 'maria-modas',
+      revendedoresAtivos: 82,
+      tempoAssistidoSegundos: 70_680,
+      aulasConcluidas: 282,
+    },
+  ],
+  porAula: [
+    { aulaId: 'a1', assistiram: 318, percentualConclusao: 92 },
+    { aulaId: 'a2', assistiram: 274, percentualConclusao: 81 },
+    { aulaId: 'a4', assistiram: 236, percentualConclusao: 74 },
+    { aulaId: 'a5', assistiram: 191, percentualConclusao: 58 },
+    { aulaId: 'a6', assistiram: 147, percentualConclusao: 43 },
+  ],
+}
+
 export type MockMentorado = {
   id: string
   nome: string
