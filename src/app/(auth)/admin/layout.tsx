@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Shield, User } from 'lucide-react'
+import { createClient } from '@/integrations/supabase/server'
 import { Button } from '@/components/ui/button'
 import { BotaoSair } from '@/components/shared/botao-sair'
 import {
@@ -9,7 +11,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: ehAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
+  if (!ehAdmin) redirect('/login')
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">

@@ -1,21 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreHorizontal, Plus, Search } from 'lucide-react'
+import { MoreHorizontal, Search } from 'lucide-react'
 import { mockMentorados, type MockMentorado } from '@/lib/mock-data'
+import { NovoMentoradoDialog } from './novo-mentorado-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +36,6 @@ const statusVariant: Record<MockMentorado['status'], 'default' | 'secondary' | '
 
 export default function MentoradosPage() {
   const [busca, setBusca] = useState('')
-  const [dialogAberto, setDialogAberto] = useState(false)
 
   const filtrados = mockMentorados.filter(
     (m) =>
@@ -62,47 +52,7 @@ export default function MentoradosPage() {
             Gerencie os espaços dos seus mentorados
           </p>
         </div>
-        <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-          <DialogTrigger render={<Button />}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo mentorado
-          </DialogTrigger>
-          <DialogContent>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                setDialogAberto(false)
-              }}
-              className="space-y-4"
-            >
-              <DialogHeader>
-                <DialogTitle>Novo mentorado</DialogTitle>
-                <DialogDescription>
-                  O convite de primeiro acesso será enviado ao e-mail informado.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome</Label>
-                <Input id="nome" placeholder="Nome completo" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" placeholder="email@exemplo.com" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="marca">Nome da marca</Label>
-                <Input id="marca" placeholder="Ex.: João Atacados" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endereco">Endereço do espaço</Label>
-                <Input id="endereco" placeholder="Ex.: joao-atacados" required />
-              </div>
-              <DialogFooter>
-                <Button type="submit">Cadastrar</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <NovoMentoradoDialog />
       </div>
 
       <div className="relative max-w-sm">
