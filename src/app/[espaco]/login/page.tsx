@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getEspacoPorSlug } from '@/lib/espacos'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { LoginForm } from './login-form'
 
 export default async function LoginPage({
   params,
@@ -15,7 +13,7 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <form className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-8 shadow-sm">
         <div className="space-y-3 text-center">
           {dados.logo_url ? (
             <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border">
@@ -28,21 +26,8 @@ export default async function LoginPage({
             <p className="text-sm text-muted-foreground">Acesse sua área de membros</p>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">E-mail</Label>
-          <Input id="email" type="email" placeholder="voce@exemplo.com" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Senha</Label>
-          <Input id="password" type="password" required />
-        </div>
-        <Button type="button" className="w-full">
-          Entrar
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          <span className="cursor-pointer underline">Esqueci minha senha</span>
-        </p>
-      </form>
+        <LoginForm />
+      </div>
     </div>
   )
 }

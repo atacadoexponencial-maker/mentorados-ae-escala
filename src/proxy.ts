@@ -29,15 +29,16 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
-    /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname) ||
-    // TODO(issue 11): remover — /admin, /mentor e rotas do espaço liberadas apenas na fase de protótipo
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/mentor') ||
-    /^\/[^/]+$/.test(pathname) ||
-    /^\/[^/]+\/aula\/[^/]+$/.test(pathname)
+    /^\/[^/]+\/(login|primeiro-acesso)$/.test(pathname)
 
   if (!user && !isPublicRoute) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    // Rotas de espaço voltam para o login do próprio espaço; equipe vai para /login
+    const segmento = pathname.split('/')[1]
+    const destino =
+      segmento && segmento !== 'admin' && segmento !== 'mentor'
+        ? `/${segmento}/login`
+        : '/login'
+    return NextResponse.redirect(new URL(destino, request.url))
   }
 
   return supabaseResponse

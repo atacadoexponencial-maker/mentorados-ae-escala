@@ -1,0 +1,63 @@
+'use server'
+
+import { redirect } from 'next/navigation'
+import { createClient } from '@/integrations/supabase/server'
+import { createAdminClient } from '@/integrations/supabase/admin'
+
+export type EstadoLogin = { erro: string | null }
+
+export async function fazerLogin(
+  _estadoAnterior: EstadoLogin,
+  formData: FormData
+): Promise<EstadoLogin> {
+  const email = String(formData.get('email') ?? '').trim()
+  const senha = String(formData.get('senha') ?? '')
+
+  const supabase = await createClient()
+  const { data: auth, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: senha,
+  })
+
+  if (error || !auth.user) {
+    return { erro: 'E-mail ou senha incorretos' }
+  }
+
+  const { data: papeis } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', auth.user.id)
+
+  const roles = new Set((papeis ?? []).map((p: { role: string }) => p.role))
+
+  if (roles.has('admin')) {
+    redirect('/admin/mentorados')
+  }
+
+  if (roles.has('mentorado')) {
+    redirect('/mentor/personalizacao')
+  }
+
+  if (roles.has('revendedor')) {
+    // Espaço do revendedor vem do vínculo no banco (não do endereço digitado)
+    const { data: revendedor } = await supabase
+      .from('revendedores')
+      .select('id, espacos(slug)')
+      .eq('user_id', auth.user.id)
+      .maybeSingle()
+
+    const slug = (revendedor as { espacos?: { slug?: string } } | null)?.espacos?.slug
+    if (slug) {
+      // Registro de último acesso é escrita administrativa (RLS não permite update pelo próprio)
+      const admin = createAdminClient()
+      await admin
+        .from('revendedores')
+        .update({ ultimo_acesso: new Date().toISOString() })
+        .eq('user_id', auth.user.id)
+      redirect(`/${slug}`)
+    }
+  }
+
+  await supabase.auth.signOut()
+  return { erro: 'Conta sem perfil configurado. Fale com o suporte.' }
+}

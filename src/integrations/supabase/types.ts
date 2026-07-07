@@ -39,9 +39,86 @@ export type Database = {
           created_at?: string
         }
       }
+      profiles: {
+        Row: {
+          id: string
+          nome: string | null
+          email: string | null
+          created_at: string
+        }
+        Insert: {
+          id: string
+          nome?: string | null
+          email?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string | null
+          email?: string | null
+          created_at?: string
+        }
+      }
+      user_roles: {
+        Row: {
+          id: string
+          user_id: string
+          role: 'admin' | 'mentorado' | 'revendedor'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          role: 'admin' | 'mentorado' | 'revendedor'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          role?: 'admin' | 'mentorado' | 'revendedor'
+          created_at?: string
+        }
+      }
+      revendedores: {
+        Row: {
+          id: string
+          user_id: string | null
+          espaco_id: string
+          nome: string | null
+          email: string
+          whatsapp: string | null
+          status: 'ativo' | 'inativo' | 'convite-pendente'
+          ultimo_acesso: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          espaco_id: string
+          nome?: string | null
+          email: string
+          whatsapp?: string | null
+          status?: 'ativo' | 'inativo' | 'convite-pendente'
+          ultimo_acesso?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          espaco_id?: string
+          nome?: string | null
+          email?: string
+          whatsapp?: string | null
+          status?: 'ativo' | 'inativo' | 'convite-pendente'
+          ultimo_acesso?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
-    Enums: Record<string, never>
+    Enums: {
+      app_role: 'admin' | 'mentorado' | 'revendedor'
+    }
   }
 }
