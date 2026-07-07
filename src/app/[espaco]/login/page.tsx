@@ -26,7 +26,13 @@ export default async function LoginPage({
             <p className="text-sm text-muted-foreground">Acesse sua área de membros</p>
           </div>
         </div>
-        <LoginForm espacoSlug={dados.slug} />
+        {dados.ativo ? (
+          <LoginForm espacoSlug={dados.slug} />
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">
+            Este espaço está temporariamente indisponível. Fale com o Atacado Exponencial.
+          </p>
+        )}
       </div>
     </div>
   )

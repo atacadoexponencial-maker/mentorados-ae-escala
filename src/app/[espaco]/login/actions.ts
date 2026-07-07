@@ -36,6 +36,15 @@ export async function fazerLogin(
   }
 
   if (roles.has('mentorado')) {
+    const { data: espacoDoMentorado } = await supabase
+      .from('espacos')
+      .select('ativo')
+      .eq('mentorado_user_id', auth.user.id)
+      .maybeSingle()
+    if (espacoDoMentorado && !espacoDoMentorado.ativo) {
+      await supabase.auth.signOut()
+      return { erro: 'Este espaço está temporariamente indisponível. Fale com o Atacado Exponencial.' }
+    }
     redirect('/mentor/personalizacao')
   }
 
@@ -43,7 +52,7 @@ export async function fazerLogin(
     // Espaço do revendedor vem do vínculo no banco (não do endereço digitado)
     const { data: revendedor } = await supabase
       .from('revendedores')
-      .select('id, status, espacos(slug)')
+      .select('id, status, espacos(slug, ativo)')
       .eq('user_id', auth.user.id)
       .maybeSingle()
 
@@ -52,7 +61,13 @@ export async function fazerLogin(
       return { erro: 'Seu acesso foi revogado. Fale com seu mentor.' }
     }
 
-    const slug = (revendedor as { espacos?: { slug?: string } } | null)?.espacos?.slug
+    const espacoDoVinculo = (revendedor as { espacos?: { slug?: string; ativo?: boolean } } | null)
+      ?.espacos
+    if (espacoDoVinculo && espacoDoVinculo.ativo === false) {
+      await supabase.auth.signOut()
+      return { erro: 'Este espaço está temporariamente indisponível. Fale com o Atacado Exponencial.' }
+    }
+    const slug = espacoDoVinculo?.slug
 
     // Login feito pela página de um espaço que não é o dela → negado
     if (espacoSlugDaPagina && slug && espacoSlugDaPagina !== slug) {
