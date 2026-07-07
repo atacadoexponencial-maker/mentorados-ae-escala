@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { MoreHorizontal, Search } from 'lucide-react'
 import { desativarMentorado, reativarMentorado, reenviarConviteMentorado } from './actions'
@@ -120,7 +121,11 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
                             Reenviar convite
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem>Ver dashboard</DropdownMenuItem>
+                        <DropdownMenuItem
+                          render={<Link href={`/admin/mentorados/${m.slug}`} />}
+                        >
+                          Ver dashboard
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
