@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { LogOut, Store, User } from 'lucide-react'
+import { Store, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BotaoSair } from '@/components/shared/botao-sair'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -41,10 +41,7 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
                   joao@joaoatacados.com.br
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
-                </DropdownMenuItem>
+                <BotaoSair destino="/login" />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

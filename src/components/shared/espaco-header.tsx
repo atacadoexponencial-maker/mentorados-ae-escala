@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { LogOut, User } from 'lucide-react'
+import { User } from 'lucide-react'
 import type { MockEspaco } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
+import { BotaoSair } from '@/components/shared/botao-sair'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -36,10 +36,7 @@ export function EspacoHeader({ espaco }: { espaco: MockEspaco }) {
                 revendedora@exemplo.com
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
+              <BotaoSair destino={`/${espaco.slug}/login`} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
