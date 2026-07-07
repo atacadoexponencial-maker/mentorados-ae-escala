@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MoreHorizontal, Search } from 'lucide-react'
 import type { MentoradoLinha } from './dados'
+import { EditarMentoradoDialog } from './editar-mentorado-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +36,7 @@ const statusVariant: Record<MentoradoLinha['status'], 'default' | 'secondary' | 
 
 export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }) {
   const [busca, setBusca] = useState('')
+  const [editando, setEditando] = useState<MentoradoLinha | null>(null)
 
   const filtrados = mentorados.filter(
     (m) =>
@@ -91,7 +93,7 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
                         <MoreHorizontal className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditando(m)}>Editar</DropdownMenuItem>
                         {m.status === 'ativo' && <DropdownMenuItem>Desativar</DropdownMenuItem>}
                         {m.status === 'inativo' && <DropdownMenuItem>Reativar</DropdownMenuItem>}
                         {m.status === 'convite-pendente' && (
@@ -107,6 +109,8 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
           </TableBody>
         </Table>
       </div>
+
+      <EditarMentoradoDialog mentorado={editando} onClose={() => setEditando(null)} />
     </div>
   )
 }

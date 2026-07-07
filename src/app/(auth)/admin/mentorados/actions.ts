@@ -92,3 +92,56 @@ export async function cadastrarMentorado(
   revalidatePath('/admin/mentorados')
   return { ok: true, erro: null }
 }
+
+export async function editarMentorado(
+  _estadoAnterior: EstadoMentorado,
+  formData: FormData
+): Promise<EstadoMentorado> {
+  if (!(await exigirAdmin())) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const espacoId = String(formData.get('espacoId') ?? '')
+  const nome = String(formData.get('nome') ?? '').trim()
+  const marca = String(formData.get('marca') ?? '').trim()
+  const slug = String(formData.get('endereco') ?? '').trim().toLowerCase()
+
+  if (!espacoId || !nome || !marca || !slug) {
+    return { ok: false, erro: 'Preencha todos os campos' }
+  }
+  if (slug.length < 3 || slug.length > 40 || !SLUG_VALIDO.test(slug)) {
+    return {
+      ok: false,
+      erro: 'Endereço inválido: use só letras minúsculas, números e hífens (ex.: joao-atacados)',
+    }
+  }
+
+  const admin = createAdminClient()
+
+  const { data: slugExistente } = await admin
+    .from('espacos')
+    .select('id')
+    .eq('slug', slug)
+    .neq('id', espacoId)
+    .maybeSingle()
+  if (slugExistente) {
+    return { ok: false, erro: 'Este endereço já está em uso por outro mentorado' }
+  }
+
+  const { data: espaco, error: erroEspaco } = await admin
+    .from('espacos')
+    .update({ nome_curso: marca, slug })
+    .eq('id', espacoId)
+    .select('mentorado_user_id')
+    .single()
+  if (erroEspaco) {
+    return { ok: false, erro: 'Não foi possível salvar. Tente novamente.' }
+  }
+
+  if (espaco.mentorado_user_id) {
+    await admin.from('profiles').update({ nome }).eq('id', espaco.mentorado_user_id)
+  }
+
+  revalidatePath('/admin/mentorados')
+  return { ok: true, erro: null }
+}
