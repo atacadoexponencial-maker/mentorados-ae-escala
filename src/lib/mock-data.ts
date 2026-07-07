@@ -95,6 +95,88 @@ export const mockRevendedores: MockRevendedor[] = [
   { id: 'r6', nome: 'Beatriz Nunes', email: 'bia.nunes@gmail.com', whatsapp: null, status: 'ativo', ultimoAcesso: '2026-07-07T08:30:00' },
 ]
 
+export type MockDashboardMentorado = {
+  totais: {
+    revendedorasAtivas: number
+    revendedorasQueAcessaram: number
+    tempoTotalSegundos: number
+    aulasConcluidas: number
+  }
+  porAula: {
+    aulaId: string
+    assistiram: number
+    percentualConclusao: number
+  }[]
+  porRevendedora: {
+    revendedorId: string
+    aulasConcluidas: number
+    tempoAssistidoSegundos: number
+    ultimaAtividade: string | null
+    aulasAssistidas: {
+      aulaId: string
+      tempoAssistidoSegundos: number
+      quando: string
+    }[]
+  }[]
+  inativasIds: string[]
+}
+
+export const mockDashboardMentorado: MockDashboardMentorado = {
+  totais: {
+    revendedorasAtivas: 4,
+    revendedorasQueAcessaram: 3,
+    tempoTotalSegundos: 34_620,
+    aulasConcluidas: 11,
+  },
+  porAula: [
+    { aulaId: 'a1', assistiram: 3, percentualConclusao: 88 },
+    { aulaId: 'a2', assistiram: 3, percentualConclusao: 76 },
+    { aulaId: 'a4', assistiram: 2, percentualConclusao: 64 },
+    { aulaId: 'a5', assistiram: 1, percentualConclusao: 52 },
+    { aulaId: 'a6', assistiram: 1, percentualConclusao: 30 },
+  ],
+  porRevendedora: [
+    {
+      revendedorId: 'r1',
+      aulasConcluidas: 5,
+      tempoAssistidoSegundos: 15_840,
+      ultimaAtividade: '2026-07-06T14:20:00',
+      aulasAssistidas: [
+        { aulaId: 'a1', tempoAssistidoSegundos: 483, quando: '2026-07-01T10:00:00' },
+        { aulaId: 'a2', tempoAssistidoSegundos: 726, quando: '2026-07-03T20:15:00' },
+        { aulaId: 'a4', tempoAssistidoSegundos: 812, quando: '2026-07-06T14:20:00' },
+      ],
+    },
+    {
+      revendedorId: 'r2',
+      aulasConcluidas: 4,
+      tempoAssistidoSegundos: 11_760,
+      ultimaAtividade: '2026-07-05T09:12:00',
+      aulasAssistidas: [
+        { aulaId: 'a1', tempoAssistidoSegundos: 483, quando: '2026-06-30T08:30:00' },
+        { aulaId: 'a2', tempoAssistidoSegundos: 690, quando: '2026-07-05T09:12:00' },
+      ],
+    },
+    {
+      revendedorId: 'r6',
+      aulasConcluidas: 2,
+      tempoAssistidoSegundos: 7_020,
+      ultimaAtividade: '2026-07-07T08:30:00',
+      aulasAssistidas: [
+        { aulaId: 'a1', tempoAssistidoSegundos: 470, quando: '2026-07-07T08:30:00' },
+      ],
+    },
+    {
+      revendedorId: 'r3',
+      aulasConcluidas: 0,
+      tempoAssistidoSegundos: 0,
+      ultimaAtividade: null,
+      aulasAssistidas: [],
+    },
+  ],
+  inativasIds: ['r3', 'r5'],
+}
+
 export type MockDashboardGlobal = {
   totais: {
     mentoradosAtivos: number
