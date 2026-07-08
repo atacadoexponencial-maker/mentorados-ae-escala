@@ -84,7 +84,15 @@ export default async function AulaPage({
         </Link>
 
         {aula.panda_video_id ? (
-          <PandaPlayer videoId={aula.panda_video_id} />
+          <PandaPlayer
+            videoId={aula.panda_video_id}
+            aulaId={aula.id}
+            iniciarEm={
+              !visualizacao?.concluida_em && (visualizacao?.ultima_posicao ?? 0) > 0
+                ? visualizacao?.ultima_posicao
+                : undefined
+            }
+          />
         ) : (
           <div
             className="flex w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-black"
