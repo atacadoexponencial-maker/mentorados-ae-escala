@@ -5,8 +5,10 @@ import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
 import { excluirModulo, moverModulo } from './actions'
 import type { ModuloLinha } from './dados'
+import { CapaDialog } from './capa-dialog'
 import { EditarModuloDialog } from './editar-modulo-dialog'
 import { NovaAulaDialog } from './nova-aula-dialog'
+import type { AulaLinha } from './dados'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +30,7 @@ import {
 export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
   const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
   const [novaAulaEm, setNovaAulaEm] = useState<{ id: string; titulo: string } | null>(null)
+  const [capaDe, setCapaDe] = useState<AulaLinha | null>(null)
   const [pendente, iniciarTransicao] = useTransition()
 
   if (modulos.length === 0) {
@@ -151,6 +154,9 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCapaDe(aula)}>
+                              Definir capa
+                            </DropdownMenuItem>
                             <DropdownMenuItem>
                               {aula.publicada ? 'Despublicar' : 'Publicar'}
                             </DropdownMenuItem>
@@ -177,6 +183,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
         key={`aula-${novaAulaEm?.id ?? 'fechado'}`}
         modulo={novaAulaEm}
         onClose={() => setNovaAulaEm(null)}
+      />
+      <CapaDialog
+        key={`capa-${capaDe?.id ?? 'fechado'}`}
+        aula={capaDe}
+        onClose={() => setCapaDe(null)}
       />
     </div>
   )

@@ -103,6 +103,52 @@ export async function criarAula(
   return { ok: true, erro: null }
 }
 
+const CAPA_MAX_BYTES = 2 * 1024 * 1024
+
+export async function definirCapa(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  if (!(await exigirAdmin())) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const aulaId = String(formData.get('aulaId') ?? '')
+  const arquivo = formData.get('arquivo')
+  if (!aulaId || !(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false, erro: 'Escolha uma imagem' }
+  }
+  if (!arquivo.type.startsWith('image/')) {
+    return { ok: false, erro: 'O arquivo precisa ser uma imagem' }
+  }
+  if (arquivo.size > CAPA_MAX_BYTES) {
+    return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
+  }
+
+  const admin = createAdminClient()
+  const extensao = (arquivo.name.split('.').pop() ?? 'jpg').toLowerCase()
+  const caminho = `capas/${aulaId}.${extensao}`
+
+  const { error: erroUpload } = await admin.storage
+    .from('conteudo')
+    .upload(caminho, arquivo, { upsert: true, contentType: arquivo.type })
+  if (erroUpload) {
+    return { ok: false, erro: 'Não foi possível enviar a imagem.' }
+  }
+
+  const {
+    data: { publicUrl },
+  } = admin.storage.from('conteudo').getPublicUrl(caminho)
+
+  const { error } = await admin.from('aulas').update({ capa_url: publicUrl }).eq('id', aulaId)
+  if (error) {
+    return { ok: false, erro: 'Não foi possível salvar a capa.' }
+  }
+
+  revalidatePath('/admin/conteudo')
+  return { ok: true, erro: null }
+}
+
 export async function excluirModulo(moduloId: string): Promise<void> {
   if (!(await exigirAdmin())) return
   const admin = createAdminClient()
