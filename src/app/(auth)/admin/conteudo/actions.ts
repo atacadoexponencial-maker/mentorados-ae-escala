@@ -149,6 +149,123 @@ export async function definirCapa(
   return { ok: true, erro: null }
 }
 
+export async function editarAula(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  if (!(await exigirAdmin())) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const aulaId = String(formData.get('aulaId') ?? '')
+  const titulo = String(formData.get('titulo') ?? '').trim()
+  const descricao = String(formData.get('descricao') ?? '').trim()
+  const pandaVideoId = String(formData.get('pandaVideoId') ?? '').trim()
+  if (!aulaId || !titulo) {
+    return { ok: false, erro: 'Informe o título da aula' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('aulas')
+    .update({
+      titulo,
+      descricao: descricao || null,
+      panda_video_id: pandaVideoId || null,
+    })
+    .eq('id', aulaId)
+  if (error) {
+    return { ok: false, erro: 'Não foi possível salvar.' }
+  }
+
+  revalidatePath('/admin/conteudo')
+  return { ok: true, erro: null }
+}
+
+export async function moverAula(aulaId: string, direcao: 'cima' | 'baixo'): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { data: aula } = await admin
+    .from('aulas')
+    .select('id, modulo_id, ordem')
+    .eq('id', aulaId)
+    .maybeSingle()
+  if (!aula) return
+
+  const { data: aulas } = await admin
+    .from('aulas')
+    .select('id, ordem')
+    .eq('modulo_id', aula.modulo_id)
+    .order('ordem')
+  if (!aulas) return
+
+  const indice = aulas.findIndex((a) => a.id === aulaId)
+  const vizinha = direcao === 'cima' ? aulas[indice - 1] : aulas[indice + 1]
+  if (indice === -1 || !vizinha) return
+
+  await admin.from('aulas').update({ ordem: vizinha.ordem }).eq('id', aula.id)
+  await admin.from('aulas').update({ ordem: aulas[indice].ordem }).eq('id', vizinha.id)
+
+  revalidatePath('/admin/conteudo')
+}
+
+export async function moverAulaParaModulo(
+  aulaId: string,
+  moduloDestinoId: string
+): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { data: ultima } = await admin
+    .from('aulas')
+    .select('ordem')
+    .eq('modulo_id', moduloDestinoId)
+    .order('ordem', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  await admin
+    .from('aulas')
+    .update({ modulo_id: moduloDestinoId, ordem: (ultima?.ordem ?? 0) + 1 })
+    .eq('id', aulaId)
+
+  revalidatePath('/admin/conteudo')
+}
+
+export async function publicarAula(aulaId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+  await admin.from('aulas').update({ publicada: true }).eq('id', aulaId)
+  revalidatePath('/admin/conteudo')
+}
+
+export async function despublicarAula(aulaId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+  await admin.from('aulas').update({ publicada: false }).eq('id', aulaId)
+  revalidatePath('/admin/conteudo')
+}
+
+export async function excluirAula(aulaId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  await admin.from('aulas').delete().eq('id', aulaId)
+
+  // Limpa arquivos do storage (capa + materiais enviados)
+  const { data: arquivosMateriais } = await admin.storage
+    .from('conteudo')
+    .list(`materiais/${aulaId}`)
+  const caminhos = (arquivosMateriais ?? []).map((a) => `materiais/${aulaId}/${a.name}`)
+  for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
+    caminhos.push(`capas/${aulaId}.${ext}`)
+  }
+  if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
+
+  revalidatePath('/admin/conteudo')
+}
+
 const MATERIAL_MAX_BYTES = 20 * 1024 * 1024
 
 function sanitizarNomeArquivo(nome: string): string {

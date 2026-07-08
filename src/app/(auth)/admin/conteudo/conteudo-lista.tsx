@@ -3,9 +3,18 @@
 import { useState, useTransition } from 'react'
 import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
-import { excluirModulo, moverModulo } from './actions'
+import {
+  despublicarAula,
+  excluirAula,
+  excluirModulo,
+  moverAula,
+  moverModulo,
+  publicarAula,
+} from './actions'
+import { MoverAulaDialog } from './mover-aula-dialog'
 import type { ModuloLinha } from './dados'
 import { CapaDialog } from './capa-dialog'
+import { EditarAulaDialog } from './editar-aula-dialog'
 import { MateriaisDialog } from './materiais-dialog'
 import { EditarModuloDialog } from './editar-modulo-dialog'
 import { NovaAulaDialog } from './nova-aula-dialog'
@@ -32,6 +41,8 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
   const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
   const [novaAulaEm, setNovaAulaEm] = useState<{ id: string; titulo: string } | null>(null)
   const [capaDe, setCapaDe] = useState<AulaLinha | null>(null)
+  const [editandoAula, setEditandoAula] = useState<AulaLinha | null>(null)
+  const [movendoAula, setMovendoAula] = useState<AulaLinha | null>(null)
   const [materiaisDeId, setMateriaisDeId] = useState<string | null>(null)
   // Sempre a versão fresca vinda do servidor — a lista atualiza após cada anexo/remoção
   const materiaisDe = materiaisDeId
@@ -126,13 +137,27 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  modulo.aulas.map((aula) => (
+                  modulo.aulas.map((aula, indiceAula) => (
                     <TableRow key={aula.id}>
                       <TableCell>
                         <span className="flex items-center gap-1 text-muted-foreground">
                           {aula.ordem}
-                          <ArrowUp className="h-3 w-3" />
-                          <ArrowDown className="h-3 w-3" />
+                          <button
+                            aria-label="Mover aula para cima"
+                            disabled={pendente || indiceAula === 0}
+                            onClick={() => iniciarTransicao(() => moverAula(aula.id, 'cima'))}
+                            className="disabled:opacity-30"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            aria-label="Mover aula para baixo"
+                            disabled={pendente || indiceAula === modulo.aulas.length - 1}
+                            onClick={() => iniciarTransicao(() => moverAula(aula.id, 'baixo'))}
+                            className="disabled:opacity-30"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </button>
                         </span>
                       </TableCell>
                       <TableCell className="font-medium">{aula.titulo}</TableCell>
@@ -159,18 +184,34 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                             <MoreHorizontal className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditandoAula(aula)}>
+                              Editar
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setCapaDe(aula)}>
                               Definir capa
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setMateriaisDeId(aula.id)}>
                               Materiais
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={pendente}
+                              onClick={() =>
+                                iniciarTransicao(() =>
+                                  aula.publicada ? despublicarAula(aula.id) : publicarAula(aula.id)
+                                )
+                              }
+                            >
                               {aula.publicada ? 'Despublicar' : 'Publicar'}
                             </DropdownMenuItem>
-                            <DropdownMenuItem>Mover para outro módulo</DropdownMenuItem>
-                            <DropdownMenuItem>Excluir</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setMovendoAula(aula)}>
+                              Mover para outro módulo
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={pendente}
+                              onClick={() => iniciarTransicao(() => excluirAula(aula.id))}
+                            >
+                              Excluir
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -202,6 +243,17 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
         key={`materiais-${materiaisDeId ?? 'fechado'}`}
         aula={materiaisDe}
         onClose={() => setMateriaisDeId(null)}
+      />
+      <EditarAulaDialog
+        key={`editar-aula-${editandoAula?.id ?? 'fechado'}`}
+        aula={editandoAula}
+        onClose={() => setEditandoAula(null)}
+      />
+      <MoverAulaDialog
+        key={`mover-aula-${movendoAula?.id ?? 'fechado'}`}
+        aula={movendoAula}
+        modulos={modulos}
+        onClose={() => setMovendoAula(null)}
       />
     </div>
   )
