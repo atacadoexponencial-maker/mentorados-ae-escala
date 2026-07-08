@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Store, User } from 'lucide-react'
+import { createClient } from '@/integrations/supabase/server'
 import { Button } from '@/components/ui/button'
 import { BotaoSair } from '@/components/shared/botao-sair'
 import {
@@ -9,7 +11,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export default function MentorLayout({ children }: { children: React.ReactNode }) {
+export default async function MentorLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: ehMentorado } = await supabase.rpc('has_role', {
+    _user_id: user.id,
+    _role: 'mentorado',
+  })
+  if (!ehMentorado) redirect('/login')
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
@@ -38,7 +51,7 @@ export default function MentorLayout({ children }: { children: React.ReactNode }
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="truncate px-2 py-1.5 text-xs text-muted-foreground">
-                  joao@joaoatacados.com.br
+                  {user.email}
                 </div>
                 <DropdownMenuSeparator />
                 <BotaoSair destino="/login" />
