@@ -6,6 +6,7 @@ import { formatarDuracao } from '@/lib/mock-data'
 import { excluirModulo, moverModulo } from './actions'
 import type { ModuloLinha } from './dados'
 import { EditarModuloDialog } from './editar-modulo-dialog'
+import { NovaAulaDialog } from './nova-aula-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +27,7 @@ import {
 
 export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
   const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
+  const [novaAulaEm, setNovaAulaEm] = useState<{ id: string; titulo: string } | null>(null)
   const [pendente, iniciarTransicao] = useTransition()
 
   if (modulos.length === 0) {
@@ -77,7 +79,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setNovaAulaEm({ id: modulo.id, titulo: modulo.titulo })}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Nova aula
               </Button>
@@ -166,6 +172,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
         key={editandoModulo?.id ?? 'fechado'}
         modulo={editandoModulo}
         onClose={() => setEditandoModulo(null)}
+      />
+      <NovaAulaDialog
+        key={`aula-${novaAulaEm?.id ?? 'fechado'}`}
+        modulo={novaAulaEm}
+        onClose={() => setNovaAulaEm(null)}
       />
     </div>
   )

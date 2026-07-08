@@ -62,6 +62,47 @@ export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): 
   revalidatePath('/admin/conteudo')
 }
 
+export async function criarAula(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  if (!(await exigirAdmin())) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const moduloId = String(formData.get('moduloId') ?? '')
+  const titulo = String(formData.get('titulo') ?? '').trim()
+  const descricao = String(formData.get('descricao') ?? '').trim()
+  const pandaVideoId = String(formData.get('pandaVideoId') ?? '').trim()
+  if (!moduloId || !titulo) {
+    return { ok: false, erro: 'Informe o título da aula' }
+  }
+
+  const admin = createAdminClient()
+  const { data: ultima } = await admin
+    .from('aulas')
+    .select('ordem')
+    .eq('modulo_id', moduloId)
+    .order('ordem', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { error } = await admin.from('aulas').insert({
+    modulo_id: moduloId,
+    titulo,
+    descricao: descricao || null,
+    panda_video_id: pandaVideoId || null,
+    ordem: (ultima?.ordem ?? 0) + 1,
+    publicada: false,
+  })
+  if (error) {
+    return { ok: false, erro: 'Não foi possível criar a aula.' }
+  }
+
+  revalidatePath('/admin/conteudo')
+  return { ok: true, erro: null }
+}
+
 export async function excluirModulo(moduloId: string): Promise<void> {
   if (!(await exigirAdmin())) return
   const admin = createAdminClient()
