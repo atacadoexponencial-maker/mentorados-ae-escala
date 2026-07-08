@@ -41,6 +41,27 @@ export async function criarModulo(
   return { ok: true, erro: null }
 }
 
+export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { data: modulos } = await admin
+    .from('modulos')
+    .select('id, ordem')
+    .order('ordem')
+  if (!modulos) return
+
+  const indice = modulos.findIndex((m) => m.id === moduloId)
+  const vizinho = direcao === 'cima' ? modulos[indice - 1] : modulos[indice + 1]
+  if (indice === -1 || !vizinho) return
+
+  const atual = modulos[indice]
+  await admin.from('modulos').update({ ordem: vizinho.ordem }).eq('id', atual.id)
+  await admin.from('modulos').update({ ordem: atual.ordem }).eq('id', vizinho.id)
+
+  revalidatePath('/admin/conteudo')
+}
+
 export async function editarModulo(
   _estadoAnterior: EstadoConteudo,
   formData: FormData

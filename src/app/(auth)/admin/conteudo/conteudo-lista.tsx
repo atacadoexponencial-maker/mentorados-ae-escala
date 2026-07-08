@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
+import { moverModulo } from './actions'
 import type { ModuloLinha } from './dados'
 import { EditarModuloDialog } from './editar-modulo-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,7 @@ import {
 
 export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
   const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
+  const [pendente, iniciarTransicao] = useTransition()
 
   if (modulos.length === 0) {
     return (
@@ -36,7 +38,7 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
 
   return (
     <div className="space-y-6">
-      {modulos.map((modulo) => (
+      {modulos.map((modulo, indice) => (
         <Card key={modulo.id}>
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
             <div>
@@ -57,10 +59,22 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
               >
                 <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Mover módulo para cima">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Mover módulo para cima"
+                disabled={pendente || indice === 0}
+                onClick={() => iniciarTransicao(() => moverModulo(modulo.id, 'cima'))}
+              >
                 <ArrowUp className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Mover módulo para baixo">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Mover módulo para baixo"
+                disabled={pendente || indice === modulos.length - 1}
+                onClick={() => iniciarTransicao(() => moverModulo(modulo.id, 'baixo'))}
+              >
                 <ArrowDown className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm">
