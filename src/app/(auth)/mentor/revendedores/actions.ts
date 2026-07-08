@@ -165,7 +165,7 @@ export async function importarRevendedoras(
   let houveAvisoEmail = false
 
   for (const linha of linhas) {
-    const [nomeBruto, emailBruto] = linha.split(',').map((p) => p?.trim() ?? '')
+    const [nomeBruto = '', emailBruto = ''] = linha.split(',').map((p) => p.trim())
     const email = emailBruto.toLowerCase()
     if (!nomeBruto || !email || !email.includes('@')) {
       falhas.push(`"${linha}": formato inválido (use: nome, e-mail)`)
