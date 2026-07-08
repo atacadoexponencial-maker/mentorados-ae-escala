@@ -201,6 +201,47 @@ export type Database = {
           created_at?: string
         }
       }
+      aula_visualizacoes: {
+        Row: {
+          id: string
+          user_id: string | null
+          revendedor_id: string | null
+          espaco_id: string
+          aula_id: string | null
+          aula_titulo: string
+          segundos_assistidos: number
+          ultima_posicao: number
+          concluida_em: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          revendedor_id?: string | null
+          espaco_id: string
+          aula_id?: string | null
+          aula_titulo: string
+          segundos_assistidos?: number
+          ultima_posicao?: number
+          concluida_em?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          revendedor_id?: string | null
+          espaco_id?: string
+          aula_id?: string | null
+          aula_titulo?: string
+          segundos_assistidos?: number
+          ultima_posicao?: number
+          concluida_em?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

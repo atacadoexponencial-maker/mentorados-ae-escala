@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { CheckCircle2, Play } from 'lucide-react'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
-import { formatarDuracao, mockProgressoRevendedor } from '@/lib/mock-data'
+import { formatarDuracao } from '@/lib/mock-data'
 import { createClient } from '@/integrations/supabase/server'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { Button } from '@/components/ui/button'
@@ -31,20 +31,31 @@ export default async function CatalogoPage({
   }
 
   // Client da sessão: a RLS garante que revendedora só vê aulas publicadas
+  // e apenas as próprias visualizações
   const supabase = await createClient()
-  const [{ data: modulos }, { data: aulas }] = await Promise.all([
+  const [{ data: modulos }, { data: aulas }, { data: visualizacoes }] = await Promise.all([
     supabase.from('modulos').select('id, titulo, ordem').order('ordem'),
     supabase
       .from('aulas')
       .select('id, modulo_id, titulo, capa_url, duracao_segundos, ordem, publicada')
       .eq('publicada', true)
       .order('ordem'),
+    supabase
+      .from('aula_visualizacoes')
+      .select('aula_id, ultima_posicao, concluida_em, updated_at')
+      .eq('user_id', vinculo.userId)
+      .order('updated_at', { ascending: false }),
   ])
 
-  // Progresso ainda mock — vira real nas issues 76–77
-  const { concluidasIds, emAndamentoAulaId } = mockProgressoRevendedor
-  const concluidas = new Set(concluidasIds)
-  const aulaEmAndamento = (aulas ?? []).find((a) => a.id === emAndamentoAulaId)
+  const concluidas = new Set(
+    (visualizacoes ?? []).filter((v) => v.concluida_em).map((v) => v.aula_id)
+  )
+  const emAndamento = (visualizacoes ?? []).find(
+    (v) => !v.concluida_em && v.ultima_posicao > 0
+  )
+  const aulaEmAndamento = emAndamento
+    ? (aulas ?? []).find((a) => a.id === emAndamento.aula_id)
+    : undefined
 
   const modulosComAulas = (modulos ?? [])
     .map((m) => ({ ...m, aulas: (aulas ?? []).filter((a) => a.modulo_id === m.id) }))
