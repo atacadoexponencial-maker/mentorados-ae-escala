@@ -1,7 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { MoreHorizontal, Search } from 'lucide-react'
+import {
+  desativarRevendedora,
+  excluirRevendedora,
+  reativarRevendedora,
+  reenviarConviteRevendedora,
+} from './actions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,6 +66,7 @@ function formatarUltimoAcesso(iso: string | null): string {
 export function RevendedorasTable({ revendedoras }: { revendedoras: RevendedoraLinha[] }) {
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<(typeof filtros)[number]['valor']>('todas')
+  const [pendente, iniciarTransicao] = useTransition()
 
   const filtradas = revendedoras.filter((r) => {
     const casaBusca =
@@ -135,11 +142,35 @@ export function RevendedorasTable({ revendedoras }: { revendedoras: RevendedoraL
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {r.status === 'convite-pendente' && (
-                          <DropdownMenuItem>Reenviar convite</DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={pendente}
+                            onClick={() => iniciarTransicao(() => reenviarConviteRevendedora(r.id))}
+                          >
+                            Reenviar convite
+                          </DropdownMenuItem>
                         )}
-                        {r.status === 'ativo' && <DropdownMenuItem>Desativar</DropdownMenuItem>}
-                        {r.status === 'inativo' && <DropdownMenuItem>Reativar</DropdownMenuItem>}
-                        <DropdownMenuItem>Excluir</DropdownMenuItem>
+                        {r.status === 'ativo' && (
+                          <DropdownMenuItem
+                            disabled={pendente}
+                            onClick={() => iniciarTransicao(() => desativarRevendedora(r.id))}
+                          >
+                            Desativar
+                          </DropdownMenuItem>
+                        )}
+                        {r.status === 'inativo' && (
+                          <DropdownMenuItem
+                            disabled={pendente}
+                            onClick={() => iniciarTransicao(() => reativarRevendedora(r.id))}
+                          >
+                            Reativar
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          disabled={pendente}
+                          onClick={() => iniciarTransicao(() => excluirRevendedora(r.id))}
+                        >
+                          Excluir
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

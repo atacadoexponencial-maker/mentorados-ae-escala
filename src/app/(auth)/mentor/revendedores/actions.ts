@@ -142,6 +142,93 @@ export async function cadastrarRevendedora(
   return { ok: true, erro: null, aviso: resultado.aviso }
 }
 
+// Retorna a revendedora só se pertencer ao espaço do mentorado logado.
+async function revendedoraDoEspaco(revendedoraId: string) {
+  const contexto = await exigirMentorado()
+  if (!contexto) return null
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('revendedores')
+    .select('id, user_id, email, nome, status, espaco_id')
+    .eq('id', revendedoraId)
+    .eq('espaco_id', contexto.espacoId)
+    .maybeSingle()
+  return data ? { revendedora: data, contexto } : null
+}
+
+export async function desativarRevendedora(revendedoraId: string): Promise<void> {
+  const alvo = await revendedoraDoEspaco(revendedoraId)
+  if (!alvo) return
+  const admin = createAdminClient()
+  await admin.from('revendedores').update({ status: 'inativo' }).eq('id', revendedoraId)
+  revalidatePath('/mentor/revendedores')
+}
+
+export async function reativarRevendedora(revendedoraId: string): Promise<void> {
+  const alvo = await revendedoraDoEspaco(revendedoraId)
+  if (!alvo) return
+  const admin = createAdminClient()
+  await admin.from('revendedores').update({ status: 'ativo' }).eq('id', revendedoraId)
+  revalidatePath('/mentor/revendedores')
+}
+
+export async function reenviarConviteRevendedora(revendedoraId: string): Promise<void> {
+  const alvo = await revendedoraDoEspaco(revendedoraId)
+  if (!alvo || alvo.revendedora.status !== 'convite-pendente') return
+  const admin = createAdminClient()
+
+  if (alvo.revendedora.user_id) {
+    const { data: usuario } = await admin.auth.admin.getUserById(alvo.revendedora.user_id)
+    if (usuario.user?.last_sign_in_at) return
+    await admin.auth.admin.deleteUser(alvo.revendedora.user_id)
+  }
+
+  const cabecalhos = await headers()
+  const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
+  const { data: convite, error } = await admin.auth.admin.inviteUserByEmail(
+    alvo.revendedora.email,
+    {
+      data: { nome: alvo.revendedora.nome },
+      redirectTo: `${origem}/${alvo.contexto.slug}/primeiro-acesso`,
+    }
+  )
+  const novoUsuario = convite?.user
+    ? convite.user
+    : (
+        await admin.auth.admin.createUser({
+          email: alvo.revendedora.email,
+          user_metadata: { nome: alvo.revendedora.nome },
+          email_confirm: false,
+        })
+      ).data.user
+  if (error && !convite?.user) {
+    console.error('Reenvio de convite de revendedora falhou:', error.message)
+  }
+  if (novoUsuario) {
+    await admin.from('user_roles').insert({ user_id: novoUsuario.id, role: 'revendedor' })
+    await admin
+      .from('revendedores')
+      .update({ user_id: novoUsuario.id })
+      .eq('id', revendedoraId)
+  }
+
+  revalidatePath('/mentor/revendedores')
+}
+
+export async function excluirRevendedora(revendedoraId: string): Promise<void> {
+  const alvo = await revendedoraDoEspaco(revendedoraId)
+  if (!alvo) return
+  const admin = createAdminClient()
+
+  // Histórico em aula_visualizacoes sobrevive via ON DELETE SET NULL
+  await admin.from('revendedores').delete().eq('id', revendedoraId)
+  if (alvo.revendedora.user_id) {
+    await admin.auth.admin.deleteUser(alvo.revendedora.user_id)
+  }
+
+  revalidatePath('/mentor/revendedores')
+}
+
 export async function importarRevendedoras(
   _estadoAnterior: EstadoRevendedora,
   formData: FormData
