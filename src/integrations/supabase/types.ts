@@ -114,6 +114,93 @@ export type Database = {
           created_at?: string
         }
       }
+      modulos: {
+        Row: {
+          id: string
+          titulo: string
+          descricao: string | null
+          ordem: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          titulo: string
+          descricao?: string | null
+          ordem?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          titulo?: string
+          descricao?: string | null
+          ordem?: number
+          created_at?: string
+        }
+      }
+      aulas: {
+        Row: {
+          id: string
+          modulo_id: string
+          titulo: string
+          descricao: string | null
+          panda_video_id: string | null
+          capa_url: string | null
+          duracao_segundos: number | null
+          ordem: number
+          publicada: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          modulo_id: string
+          titulo: string
+          descricao?: string | null
+          panda_video_id?: string | null
+          capa_url?: string | null
+          duracao_segundos?: number | null
+          ordem?: number
+          publicada?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          modulo_id?: string
+          titulo?: string
+          descricao?: string | null
+          panda_video_id?: string | null
+          capa_url?: string | null
+          duracao_segundos?: number | null
+          ordem?: number
+          publicada?: boolean
+          created_at?: string
+        }
+      }
+      aula_materiais: {
+        Row: {
+          id: string
+          aula_id: string
+          nome: string
+          url: string
+          ordem: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          aula_id: string
+          nome: string
+          url: string
+          ordem?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          aula_id?: string
+          nome?: string
+          url?: string
+          ordem?: number
+          created_at?: string
+        }
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
