@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
-import { moverModulo } from './actions'
+import { excluirModulo, moverModulo } from './actions'
 import type { ModuloLinha } from './dados'
 import { EditarModuloDialog } from './editar-modulo-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -81,7 +81,12 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                 <Plus className="mr-2 h-4 w-4" />
                 Nova aula
               </Button>
-              <Button variant="outline" size="sm" disabled={modulo.aulas.length > 0}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pendente || modulo.aulas.length > 0}
+                onClick={() => iniciarTransicao(() => excluirModulo(modulo.id))}
+              >
                 Excluir
               </Button>
             </div>

@@ -62,6 +62,20 @@ export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): 
   revalidatePath('/admin/conteudo')
 }
 
+export async function excluirModulo(moduloId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { count } = await admin
+    .from('aulas')
+    .select('id', { count: 'exact', head: true })
+    .eq('modulo_id', moduloId)
+  if ((count ?? 0) > 0) return
+
+  await admin.from('modulos').delete().eq('id', moduloId)
+  revalidatePath('/admin/conteudo')
+}
+
 export async function editarModulo(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
