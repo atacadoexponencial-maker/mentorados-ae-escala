@@ -3,11 +3,11 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Play } from 'lucide-react'
 import {
   formatarDuracao,
-  getMockEspaco,
   mockAulas,
   mockModulos,
   mockProgressoRevendedor,
 } from '@/lib/mock-data'
+import { getEspacoPorSlug } from '@/lib/espacos'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,7 +19,7 @@ export default async function AulaPage({
   params: Promise<{ espaco: string; aulaId: string }>
 }) {
   const { espaco, aulaId } = await params
-  const dados = getMockEspaco(espaco)
+  const dados = await getEspacoPorSlug(espaco)
   if (!dados) notFound()
 
   // Mesma ordenação do catálogo: módulos em ordem, aulas publicadas em ordem
