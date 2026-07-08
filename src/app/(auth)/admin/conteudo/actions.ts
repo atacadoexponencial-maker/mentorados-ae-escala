@@ -149,6 +149,122 @@ export async function definirCapa(
   return { ok: true, erro: null }
 }
 
+const MATERIAL_MAX_BYTES = 20 * 1024 * 1024
+
+function sanitizarNomeArquivo(nome: string): string {
+  return nome.replace(/[\\/]/g, '_').replace(/[^\p{L}\p{N}._ -]/gu, '').trim() || 'arquivo'
+}
+
+async function proximaOrdemMaterial(aulaId: string): Promise<number> {
+  const admin = createAdminClient()
+  const { data: ultimo } = await admin
+    .from('aula_materiais')
+    .select('ordem')
+    .eq('aula_id', aulaId)
+    .order('ordem', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (ultimo?.ordem ?? 0) + 1
+}
+
+export async function adicionarMaterialArquivo(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  if (!(await exigirAdmin())) return { ok: false, erro: 'Acesso negado' }
+
+  const aulaId = String(formData.get('aulaId') ?? '')
+  const arquivo = formData.get('arquivo')
+  if (!aulaId || !(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false, erro: 'Escolha um arquivo' }
+  }
+  if (arquivo.size > MATERIAL_MAX_BYTES) {
+    return { ok: false, erro: 'Arquivo muito grande (máximo 20 MB)' }
+  }
+
+  const admin = createAdminClient()
+  const nome = sanitizarNomeArquivo(arquivo.name)
+  const caminho = `materiais/${aulaId}/${Date.now()}-${nome}`
+
+  const { error: erroUpload } = await admin.storage
+    .from('conteudo')
+    .upload(caminho, arquivo, { contentType: arquivo.type || 'application/octet-stream' })
+  if (erroUpload) {
+    return { ok: false, erro: 'Não foi possível enviar o arquivo.' }
+  }
+
+  const {
+    data: { publicUrl },
+  } = admin.storage.from('conteudo').getPublicUrl(caminho)
+
+  const { error } = await admin.from('aula_materiais').insert({
+    aula_id: aulaId,
+    nome,
+    url: publicUrl,
+    ordem: await proximaOrdemMaterial(aulaId),
+  })
+  if (error) {
+    await admin.storage.from('conteudo').remove([caminho])
+    return { ok: false, erro: 'Não foi possível salvar o material.' }
+  }
+
+  revalidatePath('/admin/conteudo')
+  return { ok: true, erro: null }
+}
+
+export async function adicionarMaterialLink(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  if (!(await exigirAdmin())) return { ok: false, erro: 'Acesso negado' }
+
+  const aulaId = String(formData.get('aulaId') ?? '')
+  const nome = String(formData.get('nome') ?? '').trim()
+  const url = String(formData.get('url') ?? '').trim()
+  if (!aulaId || !nome || !url) {
+    return { ok: false, erro: 'Preencha nome e link' }
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    return { ok: false, erro: 'O link precisa começar com http:// ou https://' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('aula_materiais').insert({
+    aula_id: aulaId,
+    nome,
+    url,
+    ordem: await proximaOrdemMaterial(aulaId),
+  })
+  if (error) {
+    return { ok: false, erro: 'Não foi possível salvar o link.' }
+  }
+
+  revalidatePath('/admin/conteudo')
+  return { ok: true, erro: null }
+}
+
+export async function removerMaterial(materialId: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { data: material } = await admin
+    .from('aula_materiais')
+    .select('url')
+    .eq('id', materialId)
+    .maybeSingle()
+
+  await admin.from('aula_materiais').delete().eq('id', materialId)
+
+  // Se era upload nosso, remove o arquivo do bucket
+  const prefixo = '/storage/v1/object/public/conteudo/'
+  if (material?.url.includes(prefixo)) {
+    const caminho = decodeURIComponent(material.url.split(prefixo)[1] ?? '')
+    if (caminho) await admin.storage.from('conteudo').remove([caminho])
+  }
+
+  revalidatePath('/admin/conteudo')
+}
+
 export async function excluirModulo(moduloId: string): Promise<void> {
   if (!(await exigirAdmin())) return
   const admin = createAdminClient()

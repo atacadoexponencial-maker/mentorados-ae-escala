@@ -1,6 +1,8 @@
 // Server-only: conteúdo consolidado (módulos + aulas + materiais) para o admin.
 import { createAdminClient } from '@/integrations/supabase/admin'
 
+export type MaterialLinha = { id: string; nome: string; url: string }
+
 export type AulaLinha = {
   id: string
   moduloId: string
@@ -11,7 +13,7 @@ export type AulaLinha = {
   duracaoSegundos: number | null
   ordem: number
   publicada: boolean
-  qtdMateriais: number
+  materiais: MaterialLinha[]
 }
 
 export type ModuloLinha = {
@@ -31,12 +33,14 @@ export async function listarConteudo(): Promise<ModuloLinha[]> {
       .from('aulas')
       .select('id, modulo_id, titulo, descricao, panda_video_id, capa_url, duracao_segundos, ordem, publicada')
       .order('ordem'),
-    admin.from('aula_materiais').select('aula_id'),
+    admin.from('aula_materiais').select('id, aula_id, nome, url').order('ordem'),
   ])
 
-  const materiaisPorAula = new Map<string, number>()
+  const materiaisPorAula = new Map<string, MaterialLinha[]>()
   for (const m of materiais ?? []) {
-    materiaisPorAula.set(m.aula_id, (materiaisPorAula.get(m.aula_id) ?? 0) + 1)
+    const lista = materiaisPorAula.get(m.aula_id) ?? []
+    lista.push({ id: m.id, nome: m.nome, url: m.url })
+    materiaisPorAula.set(m.aula_id, lista)
   }
 
   return (modulos ?? []).map((m) => ({
@@ -56,7 +60,7 @@ export async function listarConteudo(): Promise<ModuloLinha[]> {
         duracaoSegundos: a.duracao_segundos,
         ordem: a.ordem,
         publicada: a.publicada,
-        qtdMateriais: materiaisPorAula.get(a.id) ?? 0,
+        materiais: materiaisPorAula.get(a.id) ?? [],
       })),
   }))
 }

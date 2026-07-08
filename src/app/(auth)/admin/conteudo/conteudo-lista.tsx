@@ -6,6 +6,7 @@ import { formatarDuracao } from '@/lib/mock-data'
 import { excluirModulo, moverModulo } from './actions'
 import type { ModuloLinha } from './dados'
 import { CapaDialog } from './capa-dialog'
+import { MateriaisDialog } from './materiais-dialog'
 import { EditarModuloDialog } from './editar-modulo-dialog'
 import { NovaAulaDialog } from './nova-aula-dialog'
 import type { AulaLinha } from './dados'
@@ -31,6 +32,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
   const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
   const [novaAulaEm, setNovaAulaEm] = useState<{ id: string; titulo: string } | null>(null)
   const [capaDe, setCapaDe] = useState<AulaLinha | null>(null)
+  const [materiaisDeId, setMateriaisDeId] = useState<string | null>(null)
+  // Sempre a versão fresca vinda do servidor — a lista atualiza após cada anexo/remoção
+  const materiaisDe = materiaisDeId
+    ? (modulos.flatMap((m) => m.aulas).find((a) => a.id === materiaisDeId) ?? null)
+    : null
   const [pendente, iniciarTransicao] = useTransition()
 
   if (modulos.length === 0) {
@@ -134,9 +140,9 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                         {aula.duracaoSegundos ? formatarDuracao(aula.duracaoSegundos) : '—'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {aula.qtdMateriais === 0
+                        {aula.materiais.length === 0
                           ? '—'
-                          : `${aula.qtdMateriais} ${aula.qtdMateriais === 1 ? 'arquivo' : 'arquivos'}`}
+                          : `${aula.materiais.length} ${aula.materiais.length === 1 ? 'item' : 'itens'}`}
                       </TableCell>
                       <TableCell>
                         {aula.publicada ? (
@@ -156,6 +162,9 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                             <DropdownMenuItem>Editar</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setCapaDe(aula)}>
                               Definir capa
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setMateriaisDeId(aula.id)}>
+                              Materiais
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               {aula.publicada ? 'Despublicar' : 'Publicar'}
@@ -188,6 +197,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
         key={`capa-${capaDe?.id ?? 'fechado'}`}
         aula={capaDe}
         onClose={() => setCapaDe(null)}
+      />
+      <MateriaisDialog
+        key={`materiais-${materiaisDeId ?? 'fechado'}`}
+        aula={materiaisDe}
+        onClose={() => setMateriaisDeId(null)}
       />
     </div>
   )
