@@ -1,8 +1,10 @@
 'use client'
 
-import { ArrowDown, ArrowUp, MoreHorizontal, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
 import type { ModuloLinha } from './dados'
+import { EditarModuloDialog } from './editar-modulo-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,6 +24,8 @@ import {
 } from '@/components/ui/table'
 
 export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
+  const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
+
   if (modulos.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-12 text-center">
@@ -45,6 +49,14 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
               </CardDescription>
             </div>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Editar módulo"
+                onClick={() => setEditandoModulo(modulo)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" aria-label="Mover módulo para cima">
                 <ArrowUp className="h-4 w-4" />
               </Button>
@@ -130,6 +142,12 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
           </CardContent>
         </Card>
       ))}
+
+      <EditarModuloDialog
+        key={editandoModulo?.id ?? 'fechado'}
+        modulo={editandoModulo}
+        onClose={() => setEditandoModulo(null)}
+      />
     </div>
   )
 }
