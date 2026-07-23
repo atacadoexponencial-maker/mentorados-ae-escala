@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
 import { cadastrarMentorado, type EstadoMentorado } from './actions'
 import { Button } from '@/components/ui/button'
@@ -20,11 +20,16 @@ const estadoInicial: EstadoMentorado = { ok: false, erro: null }
 
 export function NovoMentoradoDialog() {
   const [aberto, setAberto] = useState(false)
-  const [estado, acao, pendente] = useActionState(cadastrarMentorado, estadoInicial)
+  const [estado, setEstado] = useState<EstadoMentorado>(estadoInicial)
+  const [pendente, iniciar] = useTransition()
 
-  useEffect(() => {
-    if (estado.ok) setAberto(false)
-  }, [estado])
+  function acao(formData: FormData) {
+    iniciar(async () => {
+      const resultado = await cadastrarMentorado(estadoInicial, formData)
+      setEstado(resultado)
+      if (resultado.ok) setAberto(false)
+    })
+  }
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>

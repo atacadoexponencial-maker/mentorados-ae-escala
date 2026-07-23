@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
 import { cadastrarRevendedora, type EstadoRevendedora } from './actions'
 import { Button } from '@/components/ui/button'
@@ -20,11 +20,16 @@ const estadoInicial: EstadoRevendedora = { ok: false, erro: null }
 
 export function NovaRevendedoraDialog() {
   const [aberto, setAberto] = useState(false)
-  const [estado, acao, pendente] = useActionState(cadastrarRevendedora, estadoInicial)
+  const [estado, setEstado] = useState<EstadoRevendedora>(estadoInicial)
+  const [pendente, iniciar] = useTransition()
 
-  useEffect(() => {
-    if (estado.ok && !estado.aviso) setAberto(false)
-  }, [estado])
+  function acao(formData: FormData) {
+    iniciar(async () => {
+      const resultado = await cadastrarRevendedora(estadoInicial, formData)
+      setEstado(resultado)
+      if (resultado.ok && !resultado.aviso) setAberto(false)
+    })
+  }
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>

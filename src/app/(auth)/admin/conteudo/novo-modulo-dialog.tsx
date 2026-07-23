@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Plus } from 'lucide-react'
 import { criarModulo, type EstadoConteudo } from './actions'
 import { Button } from '@/components/ui/button'
@@ -21,11 +21,16 @@ const estadoInicial: EstadoConteudo = { ok: false, erro: null }
 
 export function NovoModuloDialog() {
   const [aberto, setAberto] = useState(false)
-  const [estado, acao, pendente] = useActionState(criarModulo, estadoInicial)
+  const [estado, setEstado] = useState<EstadoConteudo>(estadoInicial)
+  const [pendente, iniciar] = useTransition()
 
-  useEffect(() => {
-    if (estado.ok) setAberto(false)
-  }, [estado])
+  function acao(formData: FormData) {
+    iniciar(async () => {
+      const resultado = await criarModulo(estadoInicial, formData)
+      setEstado(resultado)
+      if (resultado.ok) setAberto(false)
+    })
+  }
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
