@@ -12,7 +12,7 @@ export default async function PersonalizacaoPage() {
 
   const { data: espaco } = await supabase
     .from('espacos')
-    .select('id, slug, nome_curso, logo_url, cor_primaria, cor_destaque, ativo')
+    .select('id, slug, nome_curso, logo_url, banner_url, cor_primaria, cor_destaque, ativo')
     .eq('mentorado_user_id', user.id)
     .maybeSingle()
   if (!espaco) redirect('/login')
