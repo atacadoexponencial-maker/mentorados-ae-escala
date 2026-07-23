@@ -138,3 +138,23 @@
     @apply font-sans;
   }
 }
+
+@utility card-tilt {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  &:hover {
+    transform: scale(1.04);
+    box-shadow: var(--shadow-card);
+  }
+}
+
+@utility row-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  & > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+  }
+}

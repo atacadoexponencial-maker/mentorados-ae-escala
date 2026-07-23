@@ -135,12 +135,12 @@ export default async function CatalogoPage({
                       {modulo.aulas.length === 1 ? 'aula concluída' : 'aulas concluídas'}
                     </span>
                   </div>
-                  <div className="flex gap-4 overflow-x-auto pb-2">
+                  <div className="row-scroll pb-2">
                     {modulo.aulas.map((aula) => (
                       <Link
                         key={aula.id}
                         href={`/${dados.slug}/aula/${aula.id}`}
-                        className="block w-[180px] shrink-0 sm:w-[200px]"
+                        className="card-tilt block w-[180px] sm:w-[200px]"
                       >
                         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-border bg-muted">
                           {aula.capa_url ? (
