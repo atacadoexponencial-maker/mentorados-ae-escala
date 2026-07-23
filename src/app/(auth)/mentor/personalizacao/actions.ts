@@ -8,6 +8,7 @@ export type EstadoPersonalizacao = { ok: boolean; erro: string | null }
 
 const COR_VALIDA = /^#[0-9a-f]{6}$/i
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
+const BANNER_MAX_BYTES = 5 * 1024 * 1024
 
 export async function salvarPersonalizacao(
   _estadoAnterior: EstadoPersonalizacao,
@@ -21,6 +22,8 @@ export async function salvarPersonalizacao(
   const corDestaque = String(formData.get('corDestaque') ?? '').trim()
   const removerLogo = formData.get('removerLogo') === 'sim'
   const logo = formData.get('logo')
+  const removerBanner = formData.get('removerBanner') === 'sim'
+  const banner = formData.get('banner')
 
   if (!nomeCurso) return { ok: false, erro: 'Informe o nome do curso' }
   if (corPrimaria && !COR_VALIDA.test(corPrimaria)) {
@@ -63,6 +66,34 @@ export async function salvarPersonalizacao(
       data: { publicUrl },
     } = admin.storage.from('conteudo').getPublicUrl(caminho)
     atualizacao.logo_url = publicUrl
+  }
+
+  if (removerBanner) {
+    atualizacao.banner_url = null
+    const { data: arquivos } = await admin.storage
+      .from('conteudo')
+      .list('banners', { search: contexto.espacoId })
+    const caminhos = (arquivos ?? []).map((a) => `banners/${a.name}`)
+    if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
+  } else if (banner instanceof File && banner.size > 0) {
+    if (!banner.type.startsWith('image/')) {
+      return { ok: false, erro: 'O banner precisa ser uma imagem' }
+    }
+    if (banner.size > BANNER_MAX_BYTES) {
+      return { ok: false, erro: 'Banner muito grande (máximo 5 MB)' }
+    }
+    const extensao = (banner.name.split('.').pop() ?? 'png').toLowerCase()
+    const caminho = `banners/${contexto.espacoId}.${extensao}`
+    const { error: erroUpload } = await admin.storage
+      .from('conteudo')
+      .upload(caminho, banner, { upsert: true, contentType: banner.type })
+    if (erroUpload) {
+      return { ok: false, erro: 'Não foi possível enviar o banner.' }
+    }
+    const {
+      data: { publicUrl },
+    } = admin.storage.from('conteudo').getPublicUrl(caminho)
+    atualizacao.banner_url = publicUrl
   }
 
   const { error } = await admin.from('espacos').update(atualizacao).eq('id', contexto.espacoId)

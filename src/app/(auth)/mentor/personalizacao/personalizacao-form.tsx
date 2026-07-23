@@ -15,10 +15,13 @@ const estadoInicial: EstadoPersonalizacao = { ok: false, erro: null }
 export function PersonalizacaoForm({ espaco }: { espaco: Espaco }) {
   const [logoPrevia, setLogoPrevia] = useState<string | null>(espaco.logo_url)
   const [removerLogo, setRemoverLogo] = useState(false)
+  const [bannerPrevia, setBannerPrevia] = useState<string | null>(espaco.banner_url)
+  const [removerBanner, setRemoverBanner] = useState(false)
   const [nomeCurso, setNomeCurso] = useState(espaco.nome_curso)
   const [corPrimaria, setCorPrimaria] = useState(espaco.cor_primaria ?? '#171717')
   const [corDestaque, setCorDestaque] = useState(espaco.cor_destaque ?? '#737373')
   const inputLogoRef = useRef<HTMLInputElement>(null)
+  const inputBannerRef = useRef<HTMLInputElement>(null)
   const [estado, acao, pendente] = useActionState(salvarPersonalizacao, estadoInicial)
 
   const aoEscolherLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,6 +38,20 @@ export function PersonalizacaoForm({ espaco }: { espaco: Espaco }) {
     if (inputLogoRef.current) inputLogoRef.current.value = ''
   }
 
+  const aoEscolherBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0]
+    if (arquivo) {
+      setBannerPrevia(URL.createObjectURL(arquivo))
+      setRemoverBanner(false)
+    }
+  }
+
+  const aoRemoverBanner = () => {
+    setBannerPrevia(null)
+    setRemoverBanner(true)
+    if (inputBannerRef.current) inputBannerRef.current.value = ''
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
@@ -45,6 +62,7 @@ export function PersonalizacaoForm({ espaco }: { espaco: Espaco }) {
         <CardContent>
           <form action={acao} className="space-y-5">
             <input type="hidden" name="removerLogo" value={removerLogo ? 'sim' : 'nao'} />
+            <input type="hidden" name="removerBanner" value={removerBanner ? 'sim' : 'nao'} />
             <div className="space-y-2">
               <Label htmlFor="logo">Logo</Label>
               <div className="flex items-center gap-3">
@@ -81,6 +99,50 @@ export function PersonalizacaoForm({ espaco }: { espaco: Espaco }) {
                   accept="image/*"
                   className="hidden"
                   onChange={aoEscolherLogo}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="banner">Banner do topo</Label>
+              {bannerPrevia ? (
+                <div className="overflow-hidden rounded-lg border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={bannerPrevia}
+                    alt="Banner"
+                    className="aspect-[2400/960] w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex aspect-[2400/960] w-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                  Sem banner (usa o degradê das cores)
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => inputBannerRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Enviar banner
+                </Button>
+                {bannerPrevia && (
+                  <Button type="button" variant="ghost" size="sm" onClick={aoRemoverBanner}>
+                    <X className="mr-2 h-4 w-4" />
+                    Remover
+                  </Button>
+                )}
+                <input
+                  ref={inputBannerRef}
+                  id="banner"
+                  name="banner"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={aoEscolherBanner}
                 />
               </div>
             </div>
