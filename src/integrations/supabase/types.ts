@@ -10,6 +10,7 @@ export type Database = {
           slug: string
           nome_curso: string
           logo_url: string | null
+          banner_url: string | null
           cor_primaria: string | null
           cor_destaque: string | null
           ativo: boolean
@@ -21,6 +22,7 @@ export type Database = {
           slug: string
           nome_curso: string
           logo_url?: string | null
+          banner_url?: string | null
           cor_primaria?: string | null
           cor_destaque?: string | null
           ativo?: boolean
@@ -32,6 +34,7 @@ export type Database = {
           slug?: string
           nome_curso?: string
           logo_url?: string | null
+          banner_url?: string | null
           cor_primaria?: string | null
           cor_destaque?: string | null
           ativo?: boolean

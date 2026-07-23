@@ -6,6 +6,7 @@ export type Espaco = {
   slug: string
   nome_curso: string
   logo_url: string | null
+  banner_url: string | null
   cor_primaria: string | null
   cor_destaque: string | null
   ativo: boolean
@@ -15,7 +16,7 @@ export async function getEspacoPorSlug(slug: string): Promise<Espaco | null> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('espacos')
-    .select('id, slug, nome_curso, logo_url, cor_primaria, cor_destaque, ativo')
+    .select('id, slug, nome_curso, logo_url, banner_url, cor_primaria, cor_destaque, ativo')
     .eq('slug', slug)
     .maybeSingle()
   return data
