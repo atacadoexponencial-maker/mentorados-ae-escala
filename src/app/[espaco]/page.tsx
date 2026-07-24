@@ -34,7 +34,11 @@ export default async function CatalogoPage({
   // e apenas as próprias visualizações
   const supabase = await createClient()
   const [{ data: modulos }, { data: aulas }, { data: visualizacoes }] = await Promise.all([
-    supabase.from('modulos').select('id, titulo, ordem').order('ordem'),
+    supabase
+      .from('modulos')
+      .select('id, titulo, ordem')
+      .order('espaco_id', { nullsFirst: true })
+      .order('ordem'),
     supabase
       .from('aulas')
       .select('id, modulo_id, titulo, capa_url, duracao_segundos, ordem, publicada')
