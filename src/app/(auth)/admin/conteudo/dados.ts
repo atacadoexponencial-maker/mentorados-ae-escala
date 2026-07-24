@@ -15,6 +15,7 @@ export type AulaLinha = {
   duracaoSegundos: number | null
   ordem: number
   publicada: boolean
+  videoStatus: string | null
   materiais: MaterialLinha[]
 }
 
@@ -37,7 +38,7 @@ export async function listarConteudo(espacoId: string | null): Promise<ModuloLin
       admin
         .from('aulas')
         .select(
-          'id, modulo_id, titulo, descricao, panda_video_id, capa_url, duracao_segundos, ordem, publicada'
+          'id, modulo_id, titulo, descricao, panda_video_id, capa_url, duracao_segundos, ordem, publicada, video_status'
         ),
       espacoId
     ).order('ordem'),
@@ -68,6 +69,7 @@ export async function listarConteudo(espacoId: string | null): Promise<ModuloLin
         duracaoSegundos: a.duracao_segundos,
         ordem: a.ordem,
         publicada: a.publicada,
+        videoStatus: a.video_status,
         materiais: materiaisPorAula.get(a.id) ?? [],
       })),
   }))

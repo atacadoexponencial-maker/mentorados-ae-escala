@@ -162,7 +162,16 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                           </button>
                         </span>
                       </TableCell>
-                      <TableCell className="font-medium">{aula.titulo}</TableCell>
+                      <TableCell className="font-medium">
+                        {aula.titulo}
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {!aula.pandaVideoId
+                            ? 'Sem vídeo'
+                            : aula.videoStatus === 'processando'
+                              ? 'Vídeo processando…'
+                              : 'Vídeo pronto'}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         {aula.duracaoSegundos ? formatarDuracao(aula.duracaoSegundos) : '—'}
                       </TableCell>
