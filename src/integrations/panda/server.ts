@@ -102,14 +102,16 @@ export async function criarSlotUpload({
   return { uploadUrl, videoId }
 }
 
-// Consulta status e duração do vídeo. Nomes exatos dos campos confirmados
-// contra a resposta real na verificação (Task 7).
+// Consulta status, duração e o id de embed do vídeo. Confirmado contra a
+// resposta real (Task 7): status 'CONVERTED', duração em `length`, e o player
+// usa `video_external_id` (não o `id` da API).
 export async function propriedadesVideo(
   videoId: string
-): Promise<{ status: string; duracaoSegundos: number | null }> {
+): Promise<{ status: string; duracaoSegundos: number | null; embedId: string | null }> {
   const res = await pandaFetch(`/videos/${videoId}`)
   const v = (await res.json()) as Record<string, unknown>
   const status = String(v.status ?? '')
   const dur = (v.length ?? v.duration ?? v.video_duration ?? null) as number | null
-  return { status, duracaoSegundos: dur }
+  const embedId = (v.video_external_id ?? null) as string | null
+  return { status, duracaoSegundos: dur, embedId }
 }

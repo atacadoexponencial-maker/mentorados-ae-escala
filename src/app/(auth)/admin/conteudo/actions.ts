@@ -528,12 +528,18 @@ export async function sincronizarStatusVideo(
   if (!aula?.panda_video_id) return { status: 'sem-video' }
 
   try {
-    const { status, duracaoSegundos } = await propriedadesVideo(aula.panda_video_id)
+    const { status, duracaoSegundos, embedId } = await propriedadesVideo(aula.panda_video_id)
     const pronto = /convert(ed)?|ready|done|pronto|ativ/i.test(status)
     if (pronto) {
+      // O player usa o id de embed (video_external_id). Gravamos ele no
+      // panda_video_id para o vídeo tocar — igual ao padrão dos IDs colados.
       await admin
         .from('aulas')
-        .update({ video_status: 'pronto', duracao_segundos: duracaoSegundos })
+        .update({
+          video_status: 'pronto',
+          duracao_segundos: duracaoSegundos,
+          ...(embedId ? { panda_video_id: embedId } : {}),
+        })
         .eq('id', aulaId)
       revalidarConteudo()
       return { status: 'pronto' }
