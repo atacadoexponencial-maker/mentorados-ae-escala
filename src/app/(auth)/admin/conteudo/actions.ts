@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
+import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
 
@@ -477,4 +478,68 @@ export async function editarModulo(
 
   revalidarConteudo()
   return { ok: true, erro: null }
+}
+
+// Cria o slot de upload no Panda para a aula (pasta do módulo garantida) e marca
+// a aula como 'processando'. O navegador sobe o arquivo direto na uploadUrl.
+export async function iniciarUploadVideo(
+  aulaId: string,
+  filename: string,
+  size: number
+): Promise<{ ok: boolean; erro?: string; uploadUrl?: string; videoId?: string }> {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return { ok: false, erro: 'Acesso negado' }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const admin = createAdminClient()
+  const { data: aula } = await admin.from('aulas').select('id, modulo_id').eq('id', aulaId).single()
+  if (!aula) return { ok: false, erro: 'Aula não encontrada' }
+
+  try {
+    const folderId = await garantirPastaModulo(aula.modulo_id)
+    const { uploadUrl, videoId } = await criarSlotUpload({ folderId, filename, size })
+    await admin
+      .from('aulas')
+      .update({ panda_video_id: videoId, video_status: 'processando' })
+      .eq('id', aulaId)
+    revalidarConteudo()
+    return { ok: true, uploadUrl, videoId }
+  } catch {
+    return { ok: false, erro: 'Não foi possível iniciar o upload no Panda.' }
+  }
+}
+
+// Consulta o Panda e, se pronto, grava status + duração. Usada em polling.
+export async function sincronizarStatusVideo(
+  aulaId: string
+): Promise<{ status: 'processando' | 'pronto' | 'sem-video' }> {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return { status: 'sem-video' }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return { status: 'sem-video' }
+
+  const admin = createAdminClient()
+  const { data: aula } = await admin
+    .from('aulas')
+    .select('panda_video_id')
+    .eq('id', aulaId)
+    .single()
+  if (!aula?.panda_video_id) return { status: 'sem-video' }
+
+  try {
+    const { status, duracaoSegundos } = await propriedadesVideo(aula.panda_video_id)
+    const pronto = /convert(ed)?|ready|done|pronto|ativ/i.test(status)
+    if (pronto) {
+      await admin
+        .from('aulas')
+        .update({ video_status: 'pronto', duracao_segundos: duracaoSegundos })
+        .eq('id', aulaId)
+      revalidarConteudo()
+      return { status: 'pronto' }
+    }
+    return { status: 'processando' }
+  } catch {
+    return { status: 'processando' }
+  }
 }
