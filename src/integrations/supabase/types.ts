@@ -123,6 +123,7 @@ export type Database = {
           titulo: string
           descricao: string | null
           ordem: number
+          espaco_id: string | null
           created_at: string
         }
         Insert: {
@@ -130,6 +131,7 @@ export type Database = {
           titulo: string
           descricao?: string | null
           ordem?: number
+          espaco_id?: string | null
           created_at?: string
         }
         Update: {
@@ -137,6 +139,7 @@ export type Database = {
           titulo?: string
           descricao?: string | null
           ordem?: number
+          espaco_id?: string | null
           created_at?: string
         }
       }
@@ -151,6 +154,7 @@ export type Database = {
           duracao_segundos: number | null
           ordem: number
           publicada: boolean
+          espaco_id: string | null
           created_at: string
         }
         Insert: {
@@ -163,6 +167,7 @@ export type Database = {
           duracao_segundos?: number | null
           ordem?: number
           publicada?: boolean
+          espaco_id?: string | null
           created_at?: string
         }
         Update: {
@@ -175,6 +180,7 @@ export type Database = {
           duracao_segundos?: number | null
           ordem?: number
           publicada?: boolean
+          espaco_id?: string | null
           created_at?: string
         }
       }
