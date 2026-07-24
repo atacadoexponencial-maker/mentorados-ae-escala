@@ -2,15 +2,22 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
-import { exigirAdmin } from '../mentorados/actions'
+import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
+
+// A mesma ação serve /admin/conteudo (base) e /mentor/conteudo (do mentorado).
+function revalidarConteudo() {
+  revalidatePath('/admin/conteudo')
+  revalidatePath('/mentor/conteudo')
+}
 
 export async function criarModulo(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -21,9 +28,10 @@ export async function criarModulo(
   }
 
   const admin = createAdminClient()
-  const { data: ultimo } = await admin
-    .from('modulos')
-    .select('ordem')
+  const { data: ultimo } = await filtrarEscopo(
+    admin.from('modulos').select('ordem'),
+    escopo.espacoId
+  )
     .order('ordem', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -32,26 +40,28 @@ export async function criarModulo(
     titulo,
     descricao: descricao || null,
     ordem: (ultimo?.ordem ?? 0) + 1,
+    espaco_id: escopo.espacoId,
   })
   if (error) {
     return { ok: false, erro: 'Não foi possível criar o módulo. Tente novamente.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
 
 export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
   const admin = createAdminClient()
 
-  const { data: modulos } = await admin
-    .from('modulos')
-    .select('id, ordem')
-    .order('ordem')
+  const { data: modulos } = await filtrarEscopo(
+    admin.from('modulos').select('id, ordem'),
+    escopo.espacoId
+  ).order('ordem')
   if (!modulos) return
 
-  const indice = modulos.findIndex((m) => m.id === moduloId)
+  const indice = modulos.findIndex((m: { id: string }) => m.id === moduloId)
   const vizinho = direcao === 'cima' ? modulos[indice - 1] : modulos[indice + 1]
   if (indice === -1 || !vizinho) return
 
@@ -59,14 +69,15 @@ export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): 
   await admin.from('modulos').update({ ordem: vizinho.ordem }).eq('id', atual.id)
   await admin.from('modulos').update({ ordem: atual.ordem }).eq('id', vizinho.id)
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function criarAula(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -76,6 +87,9 @@ export async function criarAula(
   const pandaVideoId = String(formData.get('pandaVideoId') ?? '').trim()
   if (!moduloId || !titulo) {
     return { ok: false, erro: 'Informe o título da aula' }
+  }
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
@@ -94,12 +108,13 @@ export async function criarAula(
     panda_video_id: pandaVideoId || null,
     ordem: (ultima?.ordem ?? 0) + 1,
     publicada: false,
+    espaco_id: escopo.espacoId,
   })
   if (error) {
     return { ok: false, erro: 'Não foi possível criar a aula.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
 
@@ -109,7 +124,8 @@ export async function definirCapa(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -123,6 +139,9 @@ export async function definirCapa(
   }
   if (arquivo.size > CAPA_MAX_BYTES) {
     return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
+  }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
@@ -145,7 +164,7 @@ export async function definirCapa(
     return { ok: false, erro: 'Não foi possível salvar a capa.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
 
@@ -153,7 +172,8 @@ export async function editarAula(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -163,6 +183,9 @@ export async function editarAula(
   const pandaVideoId = String(formData.get('pandaVideoId') ?? '').trim()
   if (!aulaId || !titulo) {
     return { ok: false, erro: 'Informe o título da aula' }
+  }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
@@ -178,12 +201,14 @@ export async function editarAula(
     return { ok: false, erro: 'Não foi possível salvar.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
 
 export async function moverAula(aulaId: string, direcao: 'cima' | 'baixo'): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
   const admin = createAdminClient()
 
   const { data: aula } = await admin
@@ -207,14 +232,21 @@ export async function moverAula(aulaId: string, direcao: 'cima' | 'baixo'): Prom
   await admin.from('aulas').update({ ordem: vizinha.ordem }).eq('id', aula.id)
   await admin.from('aulas').update({ ordem: aulas[indice].ordem }).eq('id', vizinha.id)
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function moverAulaParaModulo(
   aulaId: string,
   moduloDestinoId: string
 ): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  if (
+    !(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId)) ||
+    !(await conteudoNoEscopo('modulos', moduloDestinoId, escopo.espacoId))
+  ) {
+    return
+  }
   const admin = createAdminClient()
 
   const { data: ultima } = await admin
@@ -230,25 +262,31 @@ export async function moverAulaParaModulo(
     .update({ modulo_id: moduloDestinoId, ordem: (ultima?.ordem ?? 0) + 1 })
     .eq('id', aulaId)
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function publicarAula(aulaId: string): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
   const admin = createAdminClient()
   await admin.from('aulas').update({ publicada: true }).eq('id', aulaId)
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function despublicarAula(aulaId: string): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
   const admin = createAdminClient()
   await admin.from('aulas').update({ publicada: false }).eq('id', aulaId)
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function excluirAula(aulaId: string): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
   const admin = createAdminClient()
 
   await admin.from('aulas').delete().eq('id', aulaId)
@@ -263,7 +301,7 @@ export async function excluirAula(aulaId: string): Promise<void> {
   }
   if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 const MATERIAL_MAX_BYTES = 20 * 1024 * 1024
@@ -288,7 +326,8 @@ export async function adicionarMaterialArquivo(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) return { ok: false, erro: 'Acesso negado' }
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return { ok: false, erro: 'Acesso negado' }
 
   const aulaId = String(formData.get('aulaId') ?? '')
   const arquivo = formData.get('arquivo')
@@ -297,6 +336,9 @@ export async function adicionarMaterialArquivo(
   }
   if (arquivo.size > MATERIAL_MAX_BYTES) {
     return { ok: false, erro: 'Arquivo muito grande (máximo 20 MB)' }
+  }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
@@ -325,7 +367,7 @@ export async function adicionarMaterialArquivo(
     return { ok: false, erro: 'Não foi possível salvar o material.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
 
@@ -333,7 +375,8 @@ export async function adicionarMaterialLink(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) return { ok: false, erro: 'Acesso negado' }
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return { ok: false, erro: 'Acesso negado' }
 
   const aulaId = String(formData.get('aulaId') ?? '')
   const nome = String(formData.get('nome') ?? '').trim()
@@ -343,6 +386,9 @@ export async function adicionarMaterialLink(
   }
   if (!/^https?:\/\//i.test(url)) {
     return { ok: false, erro: 'O link precisa começar com http:// ou https://' }
+  }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
@@ -356,19 +402,22 @@ export async function adicionarMaterialLink(
     return { ok: false, erro: 'Não foi possível salvar o link.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
 
 export async function removerMaterial(materialId: string): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
   const admin = createAdminClient()
 
   const { data: material } = await admin
     .from('aula_materiais')
-    .select('url')
+    .select('url, aula_id')
     .eq('id', materialId)
     .maybeSingle()
+  if (!material) return
+  if (!(await conteudoNoEscopo('aulas', material.aula_id, escopo.espacoId))) return
 
   await admin.from('aula_materiais').delete().eq('id', materialId)
 
@@ -379,11 +428,13 @@ export async function removerMaterial(materialId: string): Promise<void> {
     if (caminho) await admin.storage.from('conteudo').remove([caminho])
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function excluirModulo(moduloId: string): Promise<void> {
-  if (!(await exigirAdmin())) return
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo.espacoId))) return
   const admin = createAdminClient()
 
   const { count } = await admin
@@ -393,14 +444,15 @@ export async function excluirModulo(moduloId: string): Promise<void> {
   if ((count ?? 0) > 0) return
 
   await admin.from('modulos').delete().eq('id', moduloId)
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
 }
 
 export async function editarModulo(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
-  if (!(await exigirAdmin())) {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -409,6 +461,9 @@ export async function editarModulo(
   const descricao = String(formData.get('descricao') ?? '').trim()
   if (!moduloId || !titulo) {
     return { ok: false, erro: 'Informe o nome do módulo' }
+  }
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo.espacoId))) {
+    return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
@@ -420,6 +475,6 @@ export async function editarModulo(
     return { ok: false, erro: 'Não foi possível salvar. Tente novamente.' }
   }
 
-  revalidatePath('/admin/conteudo')
+  revalidarConteudo()
   return { ok: true, erro: null }
 }
