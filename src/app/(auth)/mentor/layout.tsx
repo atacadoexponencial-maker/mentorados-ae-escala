@@ -37,6 +37,9 @@ export default async function MentorLayout({ children }: { children: React.React
             <Link href="/mentor/personalizacao" className="text-muted-foreground hover:text-foreground">
               Personalização
             </Link>
+            <Link href="/mentor/conteudo" className="text-muted-foreground hover:text-foreground">
+              Conteúdo
+            </Link>
             <Link href="/mentor/revendedores" className="text-muted-foreground hover:text-foreground">
               Revendedores
             </Link>
