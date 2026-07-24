@@ -18,6 +18,7 @@ import { EditarAulaDialog } from './editar-aula-dialog'
 import { MateriaisDialog } from './materiais-dialog'
 import { EditarModuloDialog } from './editar-modulo-dialog'
 import { NovaAulaDialog } from './nova-aula-dialog'
+import { VideoDialog } from './video-dialog'
 import type { AulaLinha } from './dados'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
   const [capaDe, setCapaDe] = useState<AulaLinha | null>(null)
   const [editandoAula, setEditandoAula] = useState<AulaLinha | null>(null)
   const [movendoAula, setMovendoAula] = useState<AulaLinha | null>(null)
+  const [videoDe, setVideoDe] = useState<AulaLinha | null>(null)
   const [materiaisDeId, setMateriaisDeId] = useState<string | null>(null)
   // Sempre a versão fresca vinda do servidor — a lista atualiza após cada anexo/remoção
   const materiaisDe = materiaisDeId
@@ -187,6 +189,9 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
                             <DropdownMenuItem onClick={() => setEditandoAula(aula)}>
                               Editar
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setVideoDe(aula)}>
+                              Enviar vídeo
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setCapaDe(aula)}>
                               Definir capa
                             </DropdownMenuItem>
@@ -254,6 +259,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
         aula={movendoAula}
         modulos={modulos}
         onClose={() => setMovendoAula(null)}
+      />
+      <VideoDialog
+        key={`video-${videoDe?.id ?? 'fechado'}`}
+        aula={videoDe}
+        onClose={() => setVideoDe(null)}
       />
     </div>
   )
