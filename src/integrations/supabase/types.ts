@@ -15,6 +15,7 @@ export type Database = {
           cor_destaque: string | null
           ativo: boolean
           mentorado_user_id: string | null
+          panda_folder_id: string | null
           created_at: string
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           cor_destaque?: string | null
           ativo?: boolean
           mentorado_user_id?: string | null
+          panda_folder_id?: string | null
           created_at?: string
         }
         Update: {
@@ -39,6 +41,7 @@ export type Database = {
           cor_destaque?: string | null
           ativo?: boolean
           mentorado_user_id?: string | null
+          panda_folder_id?: string | null
           created_at?: string
         }
       }
@@ -124,6 +127,7 @@ export type Database = {
           descricao: string | null
           ordem: number
           espaco_id: string | null
+          panda_folder_id: string | null
           created_at: string
         }
         Insert: {
@@ -132,6 +136,7 @@ export type Database = {
           descricao?: string | null
           ordem?: number
           espaco_id?: string | null
+          panda_folder_id?: string | null
           created_at?: string
         }
         Update: {
@@ -140,6 +145,7 @@ export type Database = {
           descricao?: string | null
           ordem?: number
           espaco_id?: string | null
+          panda_folder_id?: string | null
           created_at?: string
         }
       }
@@ -155,6 +161,7 @@ export type Database = {
           ordem: number
           publicada: boolean
           espaco_id: string | null
+          video_status: string | null
           created_at: string
         }
         Insert: {
@@ -168,6 +175,7 @@ export type Database = {
           ordem?: number
           publicada?: boolean
           espaco_id?: string | null
+          video_status?: string | null
           created_at?: string
         }
         Update: {
@@ -181,6 +189,7 @@ export type Database = {
           ordem?: number
           publicada?: boolean
           espaco_id?: string | null
+          video_status?: string | null
           created_at?: string
         }
       }
