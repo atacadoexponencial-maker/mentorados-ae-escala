@@ -3,7 +3,7 @@ import { ConteudoLista } from './conteudo-lista'
 import { NovoModuloDialog } from './novo-modulo-dialog'
 
 export default async function ConteudoPage() {
-  const modulos = await listarConteudo()
+  const modulos = await listarConteudo(null)
 
   return (
     <div className="space-y-6">

@@ -28,10 +28,11 @@ export async function exigirEscopoConteudo(): Promise<{ espacoId: string | null 
   return { espacoId: espaco.id }
 }
 
-// Aplica o filtro de espaço a uma query (null precisa de .is, não .eq).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function filtrarEscopo(query: any, espacoId: string | null) {
-  return espacoId === null ? query.is('espaco_id', null) : query.eq('espaco_id', espacoId)
+// Aplica o filtro de espaço a uma query, preservando o tipo (null precisa de .is, não .eq).
+export function filtrarEscopo<T>(query: T, espacoId: string | null): T {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q = query as any
+  return (espacoId === null ? q.is('espaco_id', null) : q.eq('espaco_id', espacoId)) as T
 }
 
 // Confirma que a linha pertence ao escopo (espaco_id igual, tratando null).

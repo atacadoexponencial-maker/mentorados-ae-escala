@@ -1,5 +1,7 @@
-// Server-only: conteúdo consolidado (módulos + aulas + materiais) para o admin.
+// Server-only: conteúdo consolidado (módulos + aulas + materiais) por escopo.
+// espacoId null = base (admin); preenchido = conteúdo do mentorado.
 import { createAdminClient } from '@/integrations/supabase/admin'
+import { filtrarEscopo } from './escopo'
 
 export type MaterialLinha = { id: string; nome: string; url: string }
 
@@ -24,15 +26,21 @@ export type ModuloLinha = {
   aulas: AulaLinha[]
 }
 
-export async function listarConteudo(): Promise<ModuloLinha[]> {
+export async function listarConteudo(espacoId: string | null): Promise<ModuloLinha[]> {
   const admin = createAdminClient()
 
   const [{ data: modulos }, { data: aulas }, { data: materiais }] = await Promise.all([
-    admin.from('modulos').select('id, titulo, descricao, ordem').order('ordem'),
-    admin
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, panda_video_id, capa_url, duracao_segundos, ordem, publicada')
-      .order('ordem'),
+    filtrarEscopo(admin.from('modulos').select('id, titulo, descricao, ordem'), espacoId).order(
+      'ordem'
+    ),
+    filtrarEscopo(
+      admin
+        .from('aulas')
+        .select(
+          'id, modulo_id, titulo, descricao, panda_video_id, capa_url, duracao_segundos, ordem, publicada'
+        ),
+      espacoId
+    ).order('ordem'),
     admin.from('aula_materiais').select('id, aula_id, nome, url').order('ordem'),
   ])
 
