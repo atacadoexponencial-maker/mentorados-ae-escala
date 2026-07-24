@@ -8,6 +8,8 @@
 
 **Tech Stack:** Next.js 16 (server actions + route handlers), TypeScript, Supabase, Panda Video API (`api-v2.pandavideo.com.br` + hosts de upload TUS), `tus-js-client`.
 
+> **Decisão da Task 1 (2026-07-24): CORS DIRETO OK.** Probe no navegador (localhost) deu PATCH no slot do Panda com status 204 e `upload-offset: 3`. Upload direto navegador→Panda é viável; **não** usar proxy. Pasta raiz do app criada: `PANDA_ROOT_FOLDER_ID=4356755d-6f5d-4c60-8a14-5c24240ce25a` (no `.env`). Campo do id de pasta na resposta: `id`.
+
 ## Global Constraints
 
 - `PANDA_API_KEY` **nunca** vai ao cliente nem ao bundle: só em código server-only. `NEXT_PUBLIC_*` é o único prefixo exposto.
