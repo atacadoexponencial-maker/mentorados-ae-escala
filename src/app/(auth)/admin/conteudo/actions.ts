@@ -28,11 +28,13 @@ export async function criarModulo(
     return { ok: false, erro: 'Informe o nome do módulo' }
   }
 
+  // Admin escolhe o espaço-alvo (vazio = base); mentor é forçado ao próprio.
+  const alvo = escopo.ehAdmin
+    ? String(formData.get('espacoAlvo') ?? '') || null
+    : escopo.espacoId
+
   const admin = createAdminClient()
-  const { data: ultimo } = await filtrarEscopo(
-    admin.from('modulos').select('ordem'),
-    escopo.espacoId
-  )
+  const { data: ultimo } = await filtrarEscopo(admin.from('modulos').select('ordem'), alvo)
     .order('ordem', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -41,7 +43,7 @@ export async function criarModulo(
     titulo,
     descricao: descricao || null,
     ordem: (ultimo?.ordem ?? 0) + 1,
-    espaco_id: escopo.espacoId,
+    espaco_id: alvo,
   })
   if (error) {
     return { ok: false, erro: 'Não foi possível criar o módulo. Tente novamente.' }
@@ -54,11 +56,18 @@ export async function criarModulo(
 export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): Promise<void> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo))) return
   const admin = createAdminClient()
 
+  // Reordena dentro do espaço do próprio módulo (base ou de um mentorado).
+  const { data: alvoMod } = await admin
+    .from('modulos')
+    .select('espaco_id')
+    .eq('id', moduloId)
+    .single()
   const { data: modulos } = await filtrarEscopo(
     admin.from('modulos').select('id, ordem'),
-    escopo.espacoId
+    alvoMod?.espaco_id ?? null
   ).order('ordem')
   if (!modulos) return
 
@@ -89,11 +98,17 @@ export async function criarAula(
   if (!moduloId || !titulo) {
     return { ok: false, erro: 'Informe o título da aula' }
   }
-  if (!(await conteudoNoEscopo('modulos', moduloId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
+  // A aula herda o espaço do módulo (denormalizado para o RLS).
+  const { data: modulo } = await admin
+    .from('modulos')
+    .select('espaco_id')
+    .eq('id', moduloId)
+    .single()
   const { data: ultima } = await admin
     .from('aulas')
     .select('ordem')
@@ -109,7 +124,7 @@ export async function criarAula(
     panda_video_id: pandaVideoId || null,
     ordem: (ultima?.ordem ?? 0) + 1,
     publicada: false,
-    espaco_id: escopo.espacoId,
+    espaco_id: modulo?.espaco_id ?? null,
   })
   if (error) {
     return { ok: false, erro: 'Não foi possível criar a aula.' }
@@ -141,7 +156,7 @@ export async function definirCapa(
   if (arquivo.size > CAPA_MAX_BYTES) {
     return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
   }
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -185,7 +200,7 @@ export async function editarAula(
   if (!aulaId || !titulo) {
     return { ok: false, erro: 'Informe o título da aula' }
   }
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -209,7 +224,7 @@ export async function editarAula(
 export async function moverAula(aulaId: string, direcao: 'cima' | 'baixo'): Promise<void> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) return
   const admin = createAdminClient()
 
   const { data: aula } = await admin
@@ -243,12 +258,19 @@ export async function moverAulaParaModulo(
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
   if (
-    !(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId)) ||
-    !(await conteudoNoEscopo('modulos', moduloDestinoId, escopo.espacoId))
+    !(await conteudoNoEscopo('aulas', aulaId, escopo)) ||
+    !(await conteudoNoEscopo('modulos', moduloDestinoId, escopo))
   ) {
     return
   }
   const admin = createAdminClient()
+
+  // Nunca mover conteúdo entre marcas: aula e módulo-destino no mesmo espaço.
+  const [{ data: aulaAlvo }, { data: modDestino }] = await Promise.all([
+    admin.from('aulas').select('espaco_id').eq('id', aulaId).single(),
+    admin.from('modulos').select('espaco_id').eq('id', moduloDestinoId).single(),
+  ])
+  if ((aulaAlvo?.espaco_id ?? null) !== (modDestino?.espaco_id ?? null)) return
 
   const { data: ultima } = await admin
     .from('aulas')
@@ -269,7 +291,7 @@ export async function moverAulaParaModulo(
 export async function publicarAula(aulaId: string): Promise<void> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) return
   const admin = createAdminClient()
   await admin.from('aulas').update({ publicada: true }).eq('id', aulaId)
   revalidarConteudo()
@@ -278,7 +300,7 @@ export async function publicarAula(aulaId: string): Promise<void> {
 export async function despublicarAula(aulaId: string): Promise<void> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) return
   const admin = createAdminClient()
   await admin.from('aulas').update({ publicada: false }).eq('id', aulaId)
   revalidarConteudo()
@@ -287,7 +309,7 @@ export async function despublicarAula(aulaId: string): Promise<void> {
 export async function excluirAula(aulaId: string): Promise<void> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) return
   const admin = createAdminClient()
 
   await admin.from('aulas').delete().eq('id', aulaId)
@@ -338,7 +360,7 @@ export async function adicionarMaterialArquivo(
   if (arquivo.size > MATERIAL_MAX_BYTES) {
     return { ok: false, erro: 'Arquivo muito grande (máximo 20 MB)' }
   }
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -388,7 +410,7 @@ export async function adicionarMaterialLink(
   if (!/^https?:\/\//i.test(url)) {
     return { ok: false, erro: 'O link precisa começar com http:// ou https://' }
   }
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -418,7 +440,7 @@ export async function removerMaterial(materialId: string): Promise<void> {
     .eq('id', materialId)
     .maybeSingle()
   if (!material) return
-  if (!(await conteudoNoEscopo('aulas', material.aula_id, escopo.espacoId))) return
+  if (!(await conteudoNoEscopo('aulas', material.aula_id, escopo))) return
 
   await admin.from('aula_materiais').delete().eq('id', materialId)
 
@@ -435,7 +457,7 @@ export async function removerMaterial(materialId: string): Promise<void> {
 export async function excluirModulo(moduloId: string): Promise<void> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return
-  if (!(await conteudoNoEscopo('modulos', moduloId, escopo.espacoId))) return
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo))) return
   const admin = createAdminClient()
 
   const { count } = await admin
@@ -463,7 +485,7 @@ export async function editarModulo(
   if (!moduloId || !titulo) {
     return { ok: false, erro: 'Informe o nome do módulo' }
   }
-  if (!(await conteudoNoEscopo('modulos', moduloId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('modulos', moduloId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -489,7 +511,7 @@ export async function iniciarUploadVideo(
 ): Promise<{ ok: boolean; erro?: string; uploadUrl?: string; videoId?: string }> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return { ok: false, erro: 'Acesso negado' }
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) {
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
@@ -517,7 +539,7 @@ export async function sincronizarStatusVideo(
 ): Promise<{ status: 'processando' | 'pronto' | 'sem-video' }> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return { status: 'sem-video' }
-  if (!(await conteudoNoEscopo('aulas', aulaId, escopo.espacoId))) return { status: 'sem-video' }
+  if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) return { status: 'sem-video' }
 
   const admin = createAdminClient()
   const { data: aula } = await admin
