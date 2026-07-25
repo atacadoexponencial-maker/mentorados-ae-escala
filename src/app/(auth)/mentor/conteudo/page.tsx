@@ -21,7 +21,7 @@ export default async function ConteudoMentorPage() {
             As aulas do seu espaço. No catálogo, aparecem abaixo do conteúdo da AE Escala.
           </p>
         </div>
-        <NovoModuloDialog />
+        <NovoModuloDialog espacoAlvo={contexto.espacoId} />
       </div>
       <ConteudoLista modulos={modulos} />
     </div>

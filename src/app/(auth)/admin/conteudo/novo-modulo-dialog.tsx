@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 const estadoInicial: EstadoConteudo = { ok: false, erro: null }
 
-export function NovoModuloDialog() {
+export function NovoModuloDialog({ espacoAlvo }: { espacoAlvo?: string | null }) {
   const [aberto, setAberto] = useState(false)
   const [estado, setEstado] = useState<EstadoConteudo>(estadoInicial)
   const [pendente, iniciar] = useTransition()
@@ -40,9 +40,14 @@ export function NovoModuloDialog() {
       </DialogTrigger>
       <DialogContent>
         <form action={acao} className="space-y-4">
+          <input type="hidden" name="espacoAlvo" value={espacoAlvo ?? ''} />
           <DialogHeader>
             <DialogTitle>Novo módulo</DialogTitle>
-            <DialogDescription>O módulo aparece para todos os espaços.</DialogDescription>
+            <DialogDescription>
+              {espacoAlvo
+                ? 'O módulo aparece só neste espaço.'
+                : 'O módulo aparece para todos os espaços (base).'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="modulo-titulo">Nome</Label>
