@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
-import { exigirMentorado } from '../revendedores/actions'
+import { exigirEscopoConteudo } from '@/app/(auth)/admin/conteudo/escopo'
+import { podeSalvarPersonalizacao } from './autorizacao'
 
 export type EstadoPersonalizacao = { ok: boolean; erro: string | null }
 
@@ -14,8 +15,19 @@ export async function salvarPersonalizacao(
   _estadoAnterior: EstadoPersonalizacao,
   formData: FormData
 ): Promise<EstadoPersonalizacao> {
-  const contexto = await exigirMentorado()
-  if (!contexto) return { ok: false, erro: 'Acesso negado' }
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return { ok: false, erro: 'Acesso negado' }
+
+  // Mentorado é forçado ao próprio espaço: o valor do formulário é ignorado para
+  // ele, mesmo padrão de criarModulo.
+  const espacoIdForm = String(formData.get('espacoId') ?? '').trim()
+  const alvo = escopo.ehAdmin ? espacoIdForm || null : escopo.espacoId
+  if (!podeSalvarPersonalizacao(escopo, alvo)) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+  // Após o guard acima, alvo é garantidamente uma string (podeSalvarPersonalizacao
+  // rejeita null); const separada para o TypeScript estreitar o tipo.
+  const espacoAlvo = alvo as string
 
   const nomeCurso = String(formData.get('nomeCurso') ?? '').trim()
   const corPrimaria = String(formData.get('corPrimaria') ?? '').trim()
@@ -44,7 +56,7 @@ export async function salvarPersonalizacao(
     atualizacao.logo_url = null
     const { data: arquivos } = await admin.storage
       .from('conteudo')
-      .list('logos', { search: contexto.espacoId })
+      .list('logos', { search: espacoAlvo })
     const caminhos = (arquivos ?? []).map((a) => `logos/${a.name}`)
     if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
   } else if (logo instanceof File && logo.size > 0) {
@@ -55,7 +67,7 @@ export async function salvarPersonalizacao(
       return { ok: false, erro: 'Logo muito grande (máximo 2 MB)' }
     }
     const extensao = (logo.name.split('.').pop() ?? 'png').toLowerCase()
-    const caminho = `logos/${contexto.espacoId}.${extensao}`
+    const caminho = `logos/${espacoAlvo}.${extensao}`
     const { error: erroUpload } = await admin.storage
       .from('conteudo')
       .upload(caminho, logo, { upsert: true, contentType: logo.type })
@@ -72,7 +84,7 @@ export async function salvarPersonalizacao(
     atualizacao.banner_url = null
     const { data: arquivos } = await admin.storage
       .from('conteudo')
-      .list('banners', { search: contexto.espacoId })
+      .list('banners', { search: espacoAlvo })
     const caminhos = (arquivos ?? []).map((a) => `banners/${a.name}`)
     if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
   } else if (banner instanceof File && banner.size > 0) {
@@ -83,7 +95,7 @@ export async function salvarPersonalizacao(
       return { ok: false, erro: 'Banner muito grande (máximo 5 MB)' }
     }
     const extensao = (banner.name.split('.').pop() ?? 'png').toLowerCase()
-    const caminho = `banners/${contexto.espacoId}.${extensao}`
+    const caminho = `banners/${espacoAlvo}.${extensao}`
     const { error: erroUpload } = await admin.storage
       .from('conteudo')
       .upload(caminho, banner, { upsert: true, contentType: banner.type })
@@ -96,12 +108,21 @@ export async function salvarPersonalizacao(
     atualizacao.banner_url = publicUrl
   }
 
-  const { error } = await admin.from('espacos').update(atualizacao).eq('id', contexto.espacoId)
+  const { error } = await admin.from('espacos').update(atualizacao).eq('id', espacoAlvo)
   if (error) {
     return { ok: false, erro: 'Não foi possível salvar. Tente novamente.' }
   }
 
+  const { data: espacoSalvo } = await admin
+    .from('espacos')
+    .select('slug')
+    .eq('id', alvo)
+    .maybeSingle()
+
   revalidatePath('/mentor/personalizacao')
-  revalidatePath(`/${contexto.slug}`)
+  if (espacoSalvo?.slug) {
+    revalidatePath(`/admin/mentorados/${espacoSalvo.slug}`)
+    revalidatePath(`/${espacoSalvo.slug}`)
+  }
   return { ok: true, erro: null }
 }
