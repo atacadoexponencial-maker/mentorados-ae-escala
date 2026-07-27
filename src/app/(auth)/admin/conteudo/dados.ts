@@ -80,7 +80,6 @@ export type AulaBaseLinha = {
   id: string
   titulo: string
   ordem: number
-  publicada: boolean
   capaUrl: string | null
   temCapaPropria: boolean
 }
@@ -101,8 +100,9 @@ export async function listarBaseComCapas(espacoId: string): Promise<ModuloBaseLi
     admin.from('modulos').select('id, titulo, ordem').is('espaco_id', null).order('ordem'),
     admin
       .from('aulas')
-      .select('id, modulo_id, titulo, ordem, publicada, capa_url')
+      .select('id, modulo_id, titulo, ordem, capa_url')
       .is('espaco_id', null)
+      .eq('publicada', true)
       .order('ordem'),
     admin.from('aula_capas_espaco').select('aula_id, capa_url').eq('espaco_id', espacoId),
   ])
@@ -119,7 +119,6 @@ export async function listarBaseComCapas(espacoId: string): Promise<ModuloBaseLi
         id: a.id,
         titulo: a.titulo,
         ordem: a.ordem,
-        publicada: a.publicada,
         capaUrl: resolverCapa(a.capa_url, capaPorAula.get(a.id) ?? null),
         temCapaPropria: capaPorAula.has(a.id),
       })),
