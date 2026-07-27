@@ -1,8 +1,7 @@
 'use client'
 
 import { useActionState, useEffect } from 'react'
-import { definirCapa, type EstadoConteudo } from './actions'
-import type { AulaLinha } from './dados'
+import { definirCapa, salvarCapaNoEspaco, type EstadoConteudo } from './actions'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,14 +16,23 @@ import { Label } from '@/components/ui/label'
 
 const estadoInicial: EstadoConteudo = { ok: false, erro: null }
 
+// O dialog só precisa disto; AulaLinha satisfaz o formato.
+export type AulaCapa = { id: string; titulo: string; capaUrl: string | null }
+
 export function CapaDialog({
   aula,
+  espacoId,
   onClose,
 }: {
-  aula: AulaLinha | null
+  aula: AulaCapa | null
+  espacoId?: string
   onClose: () => void
 }) {
-  const [estado, acao, pendente] = useActionState(definirCapa, estadoInicial)
+  // Com espacoId, a capa é a exceção daquela marca; sem, é a capa base da aula.
+  const [estado, acao, pendente] = useActionState(
+    espacoId ? salvarCapaNoEspaco : definirCapa,
+    estadoInicial
+  )
 
   useEffect(() => {
     if (estado.ok) onClose()
@@ -36,8 +44,9 @@ export function CapaDialog({
         {aula && (
           <form action={acao} className="space-y-4">
             <input type="hidden" name="aulaId" value={aula.id} />
+            {espacoId && <input type="hidden" name="espacoId" value={espacoId} />}
             <DialogHeader>
-              <DialogTitle>Capa da aula</DialogTitle>
+              <DialogTitle>{espacoId ? 'Capa nesta marca' : 'Capa da aula'}</DialogTitle>
               <DialogDescription>&quot;{aula.titulo}&quot; · imagem de até 2 MB</DialogDescription>
             </DialogHeader>
             {aula.capaUrl && (

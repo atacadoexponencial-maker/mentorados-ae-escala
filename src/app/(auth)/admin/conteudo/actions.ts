@@ -184,6 +184,111 @@ export async function definirCapa(
   return { ok: true, erro: null }
 }
 
+// Só a admin troca a capa de conteúdo base, e só de aula base: aula de marca já
+// tem capa pelo caminho normal (definirCapa).
+export async function salvarCapaNoEspaco(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo?.ehAdmin) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const aulaId = String(formData.get('aulaId') ?? '')
+  const espacoId = String(formData.get('espacoId') ?? '')
+  const arquivo = formData.get('arquivo')
+  if (!aulaId || !espacoId) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    return { ok: false, erro: 'Escolha uma imagem' }
+  }
+  if (!arquivo.type.startsWith('image/')) {
+    return { ok: false, erro: 'O arquivo precisa ser uma imagem' }
+  }
+  if (arquivo.size > CAPA_MAX_BYTES) {
+    return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
+  }
+
+  const admin = createAdminClient()
+  const { data: aula } = await admin
+    .from('aulas')
+    .select('espaco_id')
+    .eq('id', aulaId)
+    .maybeSingle()
+  if (!aula || aula.espaco_id !== null) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const extensao = (arquivo.name.split('.').pop() ?? 'jpg').toLowerCase()
+  const caminho = `capas/${aulaId}-${espacoId}.${extensao}`
+  const { error: erroUpload } = await admin.storage
+    .from('conteudo')
+    .upload(caminho, arquivo, { upsert: true, contentType: arquivo.type })
+  if (erroUpload) {
+    return { ok: false, erro: 'Não foi possível enviar a imagem.' }
+  }
+
+  const {
+    data: { publicUrl },
+  } = admin.storage.from('conteudo').getPublicUrl(caminho)
+
+  const { error } = await admin
+    .from('aula_capas_espaco')
+    .upsert({ aula_id: aulaId, espaco_id: espacoId, capa_url: publicUrl })
+  if (error) {
+    return { ok: false, erro: 'Não foi possível salvar a capa.' }
+  }
+
+  await revalidarEspaco(espacoId)
+  revalidarConteudo()
+  return { ok: true, erro: null }
+}
+
+// Revalida a área de membros da marca afetada (o slug não vem no formulário).
+async function revalidarEspaco(espacoId: string) {
+  const admin = createAdminClient()
+  const { data } = await admin.from('espacos').select('slug').eq('id', espacoId).maybeSingle()
+  if (data?.slug) revalidatePath(`/${data.slug}`)
+}
+
+export async function removerCapaDoEspaco(
+  _estadoAnterior: EstadoConteudo,
+  formData: FormData
+): Promise<EstadoConteudo> {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo?.ehAdmin) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const aulaId = String(formData.get('aulaId') ?? '')
+  const espacoId = String(formData.get('espacoId') ?? '')
+  if (!aulaId || !espacoId) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+
+  const admin = createAdminClient()
+  const { data: arquivos } = await admin.storage
+    .from('conteudo')
+    .list('capas', { search: `${aulaId}-${espacoId}` })
+  const caminhos = (arquivos ?? []).map((a) => `capas/${a.name}`)
+  if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
+
+  const { error } = await admin
+    .from('aula_capas_espaco')
+    .delete()
+    .eq('aula_id', aulaId)
+    .eq('espaco_id', espacoId)
+  if (error) {
+    return { ok: false, erro: 'Não foi possível remover a capa.' }
+  }
+
+  await revalidarEspaco(espacoId)
+  revalidarConteudo()
+  return { ok: true, erro: null }
+}
+
 export async function editarAula(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
@@ -322,6 +427,11 @@ export async function excluirAula(aulaId: string): Promise<void> {
   for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
     caminhos.push(`capas/${aulaId}.${ext}`)
   }
+  // Capas por marca desta aula (as linhas caem por ON DELETE CASCADE).
+  const { data: capasMarca } = await admin.storage
+    .from('conteudo')
+    .list('capas', { search: `${aulaId}-` })
+  for (const a of capasMarca ?? []) caminhos.push(`capas/${a.name}`)
   if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
 
   revalidarConteudo()
