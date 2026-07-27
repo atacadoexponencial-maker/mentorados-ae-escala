@@ -101,7 +101,7 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
                   id="logo"
                   name="logo"
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
                   className="hidden"
                   onChange={aoEscolherLogo}
                 />
@@ -149,7 +149,7 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
                   id="banner"
                   name="banner"
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
                   className="hidden"
                   onChange={aoEscolherBanner}
                 />

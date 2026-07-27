@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo } from '@/app/(auth)/admin/conteudo/escopo'
 import { podeSalvarPersonalizacao } from './autorizacao'
+import { validarImagem, ehUuid } from '@/lib/upload'
 
 export type EstadoPersonalizacao = { ok: boolean; erro: string | null }
 
@@ -22,12 +23,12 @@ export async function salvarPersonalizacao(
   // ele, mesmo padrão de criarModulo.
   const espacoIdForm = String(formData.get('espacoId') ?? '').trim()
   const alvo = escopo.ehAdmin ? espacoIdForm || null : escopo.espacoId
-  if (!podeSalvarPersonalizacao(escopo, alvo)) {
+  // O id do admin vem do formulário e entra no caminho do Storage: exigir UUID
+  // impede que um valor livre suba de pasta com `../`.
+  if (!alvo || !ehUuid(alvo) || !podeSalvarPersonalizacao(escopo, alvo)) {
     return { ok: false, erro: 'Acesso negado' }
   }
-  // Após o guard acima, alvo é garantidamente uma string (podeSalvarPersonalizacao
-  // rejeita null); const separada para o TypeScript estreitar o tipo.
-  const espacoAlvo = alvo as string
+  const espacoAlvo = alvo
 
   const nomeCurso = String(formData.get('nomeCurso') ?? '').trim()
   const corPrimaria = String(formData.get('corPrimaria') ?? '').trim()
@@ -60,17 +61,17 @@ export async function salvarPersonalizacao(
     const caminhos = (arquivos ?? []).map((a) => `logos/${a.name}`)
     if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
   } else if (logo instanceof File && logo.size > 0) {
-    if (!logo.type.startsWith('image/')) {
-      return { ok: false, erro: 'A logo precisa ser uma imagem' }
-    }
     if (logo.size > LOGO_MAX_BYTES) {
       return { ok: false, erro: 'Logo muito grande (máximo 2 MB)' }
     }
-    const extensao = (logo.name.split('.').pop() ?? 'png').toLowerCase()
-    const caminho = `logos/${espacoAlvo}.${extensao}`
+    const validacao = await validarImagem(logo)
+    if (!validacao.ok) {
+      return { ok: false, erro: validacao.erro }
+    }
+    const caminho = `logos/${espacoAlvo}.${validacao.imagem.extensao}`
     const { error: erroUpload } = await admin.storage
       .from('conteudo')
-      .upload(caminho, logo, { upsert: true, contentType: logo.type })
+      .upload(caminho, logo, { upsert: true, contentType: validacao.imagem.contentType })
     if (erroUpload) {
       return { ok: false, erro: 'Não foi possível enviar a logo.' }
     }
@@ -88,17 +89,17 @@ export async function salvarPersonalizacao(
     const caminhos = (arquivos ?? []).map((a) => `banners/${a.name}`)
     if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
   } else if (banner instanceof File && banner.size > 0) {
-    if (!banner.type.startsWith('image/')) {
-      return { ok: false, erro: 'O banner precisa ser uma imagem' }
-    }
     if (banner.size > BANNER_MAX_BYTES) {
       return { ok: false, erro: 'Banner muito grande (máximo 5 MB)' }
     }
-    const extensao = (banner.name.split('.').pop() ?? 'png').toLowerCase()
-    const caminho = `banners/${espacoAlvo}.${extensao}`
+    const validacao = await validarImagem(banner)
+    if (!validacao.ok) {
+      return { ok: false, erro: validacao.erro }
+    }
+    const caminho = `banners/${espacoAlvo}.${validacao.imagem.extensao}`
     const { error: erroUpload } = await admin.storage
       .from('conteudo')
-      .upload(caminho, banner, { upsert: true, contentType: banner.type })
+      .upload(caminho, banner, { upsert: true, contentType: validacao.imagem.contentType })
     if (erroUpload) {
       return { ok: false, erro: 'Não foi possível enviar o banner.' }
     }

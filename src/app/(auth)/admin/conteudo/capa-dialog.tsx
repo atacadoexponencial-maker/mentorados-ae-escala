@@ -57,7 +57,13 @@ export function CapaDialog({
             )}
             <div className="space-y-2">
               <Label htmlFor="capa-arquivo">Imagem</Label>
-              <Input id="capa-arquivo" name="arquivo" type="file" accept="image/*" required />
+              <Input
+                id="capa-arquivo"
+                name="arquivo"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                required
+              />
             </div>
             {estado.erro && (
               <p role="alert" className="text-sm text-destructive">
