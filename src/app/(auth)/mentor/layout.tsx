@@ -23,6 +23,12 @@ export default async function MentorLayout({ children }: { children: React.React
   })
   if (!ehMentorado) redirect('/login')
 
+  const { data: espaco } = await supabase
+    .from('espacos')
+    .select('slug')
+    .eq('mentorado_user_id', user.id)
+    .maybeSingle()
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
@@ -46,6 +52,16 @@ export default async function MentorLayout({ children }: { children: React.React
             <Link href="/mentor/dashboard" className="text-muted-foreground hover:text-foreground">
               Dashboard
             </Link>
+            {espaco && (
+              <a
+                href={`/${espaco.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Ver área de membros
+              </a>
+            )}
           </nav>
           <div className="ml-auto flex items-center gap-1">
             <DropdownMenu>
