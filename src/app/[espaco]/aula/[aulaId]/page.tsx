@@ -5,6 +5,7 @@ import { formatarDuracao } from '@/lib/mock-data'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
 import { createClient } from '@/integrations/supabase/server'
+import { carregarCatalogo } from '@/lib/catalogo'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { PandaPlayer } from '@/components/shared/panda-player'
 import { Badge } from '@/components/ui/badge'
@@ -31,15 +32,9 @@ export default async function AulaPage({
     redirect(`/${vinculo.revendedor.espacoSlug}`)
   }
 
-  // Client da sessão: RLS limita a aulas publicadas para revendedoras
   const supabase = await createClient()
-  const [{ data: modulos }, { data: aulas }, { data: visualizacao }] = await Promise.all([
-    supabase.from('modulos').select('id, titulo, ordem').order('ordem'),
-    supabase
-      .from('aulas')
-      .select('id, modulo_id, titulo, descricao, panda_video_id, duracao_segundos, ordem')
-      .eq('publicada', true)
-      .order('ordem'),
+  const [modulos, { data: visualizacao }] = await Promise.all([
+    carregarCatalogo(dados.id),
     supabase
       .from('aula_visualizacoes')
       .select('concluida_em, ultima_posicao')
@@ -48,12 +43,9 @@ export default async function AulaPage({
       .maybeSingle(),
   ])
 
-  const ordemModulos = new Map((modulos ?? []).map((m) => [m.id, m.ordem]))
-  const publicadas = (aulas ?? []).sort(
-    (a, b) =>
-      (ordemModulos.get(a.modulo_id) ?? 0) - (ordemModulos.get(b.modulo_id) ?? 0) ||
-      a.ordem - b.ordem
-  )
+  // carregarCatalogo devolve os módulos na ordem de exibição (base primeiro) e as
+  // aulas publicadas ordenadas dentro de cada um: a sequência linear é o achatamento.
+  const publicadas = modulos.flatMap((m) => m.aulas)
 
   const indice = publicadas.findIndex((a) => a.id === aulaId)
   if (indice === -1) notFound()
@@ -62,7 +54,7 @@ export default async function AulaPage({
   const anterior = indice > 0 ? publicadas[indice - 1] : null
   const proxima = indice < publicadas.length - 1 ? publicadas[indice + 1] : null
   const concluida = Boolean(visualizacao?.concluida_em)
-  const modulo = (modulos ?? []).find((m) => m.id === aula.modulo_id)
+  const modulo = modulos.find((m) => m.id === aula.moduloId)
 
   const { data: materiais } = await supabase
     .from('aula_materiais')
@@ -83,9 +75,9 @@ export default async function AulaPage({
           Voltar ao catálogo
         </Link>
 
-        {aula.panda_video_id ? (
+        {aula.pandaVideoId ? (
           <PandaPlayer
-            videoId={aula.panda_video_id}
+            videoId={aula.pandaVideoId}
             aulaId={aula.id}
             iniciarEm={
               !visualizacao?.concluida_em && (visualizacao?.ultima_posicao ?? 0) > 0
@@ -117,7 +109,7 @@ export default async function AulaPage({
           </div>
           <p className="text-sm text-muted-foreground">
             {modulo?.titulo}
-            {aula.duracao_segundos ? ` · ${formatarDuracao(aula.duracao_segundos)}` : ''}
+            {aula.duracaoSegundos ? ` · ${formatarDuracao(aula.duracaoSegundos)}` : ''}
           </p>
           {aula.descricao && <p className="text-sm leading-relaxed">{aula.descricao}</p>}
         </div>
