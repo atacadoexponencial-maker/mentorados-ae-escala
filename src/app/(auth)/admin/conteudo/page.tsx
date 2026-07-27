@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/integrations/supabase/admin'
-import { listarConteudo } from './dados'
+import { listarConteudo, listarBaseComCapas } from './dados'
+import { BaseHerdada } from './base-herdada'
 import { ConteudoLista } from './conteudo-lista'
 import { NovoModuloDialog } from './novo-modulo-dialog'
 import { SeletorEspaco } from './seletor-espaco'
@@ -19,6 +20,7 @@ export default async function ConteudoPage({
     .order('nome_curso')
 
   const modulos = await listarConteudo(espacoSelecionado)
+  const baseHerdada = espacoSelecionado ? await listarBaseComCapas(espacoSelecionado) : []
 
   return (
     <div className="space-y-6">
@@ -36,6 +38,7 @@ export default async function ConteudoPage({
           <NovoModuloDialog espacoAlvo={espacoSelecionado} />
         </div>
       </div>
+      {espacoSelecionado && <BaseHerdada modulos={baseHerdada} espacoId={espacoSelecionado} />}
       <ConteudoLista modulos={modulos} />
     </div>
   )
