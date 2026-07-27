@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator'
 
 const estadoInicial: EstadoPersonalizacao = { ok: false, erro: null }
 
-export function PersonalizacaoForm({ espaco }: { espaco: Espaco }) {
+export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espacoId?: string }) {
   const [logoPrevia, setLogoPrevia] = useState<string | null>(espaco.logo_url)
   const [removerLogo, setRemoverLogo] = useState(false)
   const [bannerPrevia, setBannerPrevia] = useState<string | null>(espaco.banner_url)
@@ -63,6 +63,7 @@ export function PersonalizacaoForm({ espaco }: { espaco: Espaco }) {
           <form action={acao} className="space-y-5">
             <input type="hidden" name="removerLogo" value={removerLogo ? 'sim' : 'nao'} />
             <input type="hidden" name="removerBanner" value={removerBanner ? 'sim' : 'nao'} />
+            {espacoId && <input type="hidden" name="espacoId" value={espacoId} />}
             <div className="space-y-2">
               <Label htmlFor="logo">Logo</Label>
               <div className="flex items-center gap-3">
