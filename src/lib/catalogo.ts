@@ -4,6 +4,7 @@
 // mentorado (que a RLS deixa ler mais) vejam exatamente o mesmo que ela.
 import 'server-only'
 import { createClient } from '@/integrations/supabase/server'
+import { resolverCapa } from './capas'
 
 export type AulaCatalogo = {
   id: string
@@ -27,7 +28,7 @@ export async function carregarCatalogo(espacoId: string): Promise<ModuloCatalogo
   const supabase = await createClient()
   const filtroEspaco = `espaco_id.is.null,espaco_id.eq.${espacoId}`
 
-  const [{ data: modulos }, { data: aulas }] = await Promise.all([
+  const [{ data: modulos }, { data: aulas }, { data: capas }] = await Promise.all([
     supabase
       .from('modulos')
       .select('id, titulo, ordem')
@@ -40,7 +41,11 @@ export async function carregarCatalogo(espacoId: string): Promise<ModuloCatalogo
       .or(filtroEspaco)
       .eq('publicada', true)
       .order('ordem'),
+    supabase.from('aula_capas_espaco').select('aula_id, capa_url').eq('espaco_id', espacoId),
   ])
+
+  // Capa personalizada por marca, indexada por aula, para resolver a excecao na hora de montar o catalogo.
+  const capaPorAula = new Map((capas ?? []).map((c) => [c.aula_id, c.capa_url]))
 
   return (modulos ?? []).map((m) => ({
     id: m.id,
@@ -54,7 +59,7 @@ export async function carregarCatalogo(espacoId: string): Promise<ModuloCatalogo
         titulo: a.titulo,
         descricao: a.descricao,
         pandaVideoId: a.panda_video_id,
-        capaUrl: a.capa_url,
+        capaUrl: resolverCapa(a.capa_url, capaPorAula.get(a.id) ?? null),
         duracaoSegundos: a.duracao_segundos,
         ordem: a.ordem,
       })),
