@@ -4,9 +4,11 @@ import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Play } from 'lucide-reac
 import { formatarDuracao } from '@/lib/mock-data'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
+import { ehPreview } from '@/lib/preview'
 import { createClient } from '@/integrations/supabase/server'
 import { carregarCatalogo } from '@/lib/catalogo'
 import { EspacoHeader } from '@/components/shared/espaco-header'
+import { FaixaPreview } from '@/components/shared/faixa-preview'
 import { PandaPlayer } from '@/components/shared/panda-player'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +33,8 @@ export default async function AulaPage({
   ) {
     redirect(`/${vinculo.revendedor.espacoSlug}`)
   }
+
+  const preview = ehPreview(vinculo.revendedor?.espacoId ?? null, dados.id)
 
   const supabase = await createClient()
   const [modulos, { data: visualizacao }] = await Promise.all([
@@ -64,6 +68,7 @@ export default async function AulaPage({
 
   return (
     <div className="flex min-h-screen flex-col">
+      {preview && <FaixaPreview />}
       <EspacoHeader espaco={dados} emailUsuario={vinculo.email ?? undefined} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">

@@ -3,10 +3,12 @@ import { notFound, redirect } from 'next/navigation'
 import { CheckCircle2, Play } from 'lucide-react'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
+import { ehPreview } from '@/lib/preview'
 import { formatarDuracao } from '@/lib/mock-data'
 import { createClient } from '@/integrations/supabase/server'
 import { carregarCatalogo } from '@/lib/catalogo'
 import { EspacoHeader } from '@/components/shared/espaco-header'
+import { FaixaPreview } from '@/components/shared/faixa-preview'
 import { Button } from '@/components/ui/button'
 
 export default async function CatalogoPage({
@@ -30,6 +32,8 @@ export default async function CatalogoPage({
   ) {
     redirect(`/${vinculo.revendedor.espacoSlug}`)
   }
+
+  const preview = ehPreview(vinculo.revendedor?.espacoId ?? null, dados.id)
 
   // Client da sessão: a RLS garante que revendedora só vê aulas publicadas
   // e apenas as próprias visualizações
@@ -59,6 +63,7 @@ export default async function CatalogoPage({
 
   return (
     <div className="flex min-h-screen flex-col">
+      {preview && <FaixaPreview />}
       <EspacoHeader espaco={dados} emailUsuario={vinculo.email ?? undefined} />
 
       <div className="mx-auto w-full max-w-7xl px-4 pt-6">
