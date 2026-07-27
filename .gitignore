@@ -43,6 +43,7 @@ next-env.d.ts
 # Documentações do workflow (spec e issues não vão para o repositório)
 spec.md
 issues/
+PENDENCIAS.md
 
 # Segredos — nunca commitar
 .env
