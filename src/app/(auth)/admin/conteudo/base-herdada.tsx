@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 const estadoInicial: EstadoConteudo = { ok: false, erro: null }
 
 function BotaoRemoverCapa({ aulaId, espacoId }: { aulaId: string; espacoId: string }) {
-  const [, acao, pendente] = useActionState(removerCapaDoEspaco, estadoInicial)
+  const [estado, acao, pendente] = useActionState(removerCapaDoEspaco, estadoInicial)
   return (
     <form action={acao}>
       <input type="hidden" name="aulaId" value={aulaId} />
@@ -18,6 +18,11 @@ function BotaoRemoverCapa({ aulaId, espacoId }: { aulaId: string; espacoId: stri
       <Button type="submit" variant="ghost" size="sm" disabled={pendente}>
         {pendente ? 'Removendo…' : 'Remover capa desta marca'}
       </Button>
+      {estado.erro && (
+        <p role="alert" className="text-sm text-destructive">
+          {estado.erro}
+        </p>
+      )}
     </form>
   )
 }
@@ -76,7 +81,12 @@ export function BaseHerdada({
           </section>
         ))}
 
-        <CapaDialog aula={capaDe} espacoId={espacoId} onClose={() => setCapaDe(null)} />
+        <CapaDialog
+          key={`capa-${capaDe?.id ?? 'fechado'}`}
+          aula={capaDe}
+          espacoId={espacoId}
+          onClose={() => setCapaDe(null)}
+        />
       </CardContent>
     </Card>
   )

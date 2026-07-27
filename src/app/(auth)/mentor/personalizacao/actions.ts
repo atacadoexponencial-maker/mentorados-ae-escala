@@ -116,7 +116,7 @@ export async function salvarPersonalizacao(
   const { data: espacoSalvo } = await admin
     .from('espacos')
     .select('slug')
-    .eq('id', alvo)
+    .eq('id', espacoAlvo)
     .maybeSingle()
 
   revalidatePath('/mentor/personalizacao')

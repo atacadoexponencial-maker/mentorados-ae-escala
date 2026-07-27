@@ -1,6 +1,6 @@
 // src/lib/catalogo.ts
-// Server-only: o que a revendedora de um espaco enxerga - base + conteudo da marca.
-// Ponto unico de leitura para o catalogo e para a pagina de aula, para que admin e
+// Server-only: o que a revendedora de um espaço enxerga - base + conteúdo da marca.
+// Ponto único de leitura para o catálogo e para a página de aula, para que admin e
 // mentorado (que a RLS deixa ler mais) vejam exatamente o mesmo que ela.
 import 'server-only'
 import { createClient } from '@/integrations/supabase/server'
@@ -44,7 +44,7 @@ export async function carregarCatalogo(espacoId: string): Promise<ModuloCatalogo
     supabase.from('aula_capas_espaco').select('aula_id, capa_url').eq('espaco_id', espacoId),
   ])
 
-  // Capa personalizada por marca, indexada por aula, para resolver a excecao na hora de montar o catalogo.
+  // Capa personalizada por marca, indexada por aula, para resolver a exceção na hora de montar o catálogo.
   const capaPorAula = new Map((capas ?? []).map((c) => [c.aula_id, c.capa_url]))
 
   return (modulos ?? []).map((m) => ({
