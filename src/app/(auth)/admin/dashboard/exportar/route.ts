@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirAdmin } from '../../mentorados/actions'
+import { escaparCampoCsv as escapa } from '@/lib/csv'
 
 // CSV global: uma linha por espaço.
 export async function GET(request: NextRequest) {
@@ -26,7 +27,6 @@ export async function GET(request: NextRequest) {
     consulta,
   ])
 
-  const escapa = (v: string) => `"${v.replaceAll('"', '""')}"`
   const linhas = [
     ['Marca', 'Endereço', 'Ativo', 'Revendedoras ativas', 'Aulas concluídas', 'Segundos assistidos']
       .map(escapa)

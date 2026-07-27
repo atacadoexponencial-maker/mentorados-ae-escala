@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/integrations/supabase/server'
+import { escaparCampoCsv as escapa } from '@/lib/csv'
 
 // CSV do período: uma linha por revendedora do espaço (RLS da sessão isola).
 export async function GET(request: NextRequest) {
@@ -25,7 +26,6 @@ export async function GET(request: NextRequest) {
     consulta,
   ])
 
-  const escapa = (v: string) => `"${v.replaceAll('"', '""')}"`
   const linhas = [
     ['Nome', 'E-mail', 'Status', 'Último acesso', 'Aulas concluídas', 'Segundos assistidos']
       .map(escapa)
