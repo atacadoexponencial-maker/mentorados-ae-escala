@@ -5,6 +5,7 @@ import { definirSenha, type EstadoPrimeiroAcesso } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SENHA_MINIMA } from './mensagens'
 
 const estadoInicial: EstadoPrimeiroAcesso = { erro: null }
 
@@ -15,11 +16,11 @@ export function PrimeiroAcessoForm() {
     <form action={acao} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="senha">Nova senha</Label>
-        <Input id="senha" name="senha" type="password" minLength={8} required />
+        <Input id="senha" name="senha" type="password" minLength={SENHA_MINIMA} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmacao">Confirmar senha</Label>
-        <Input id="confirmacao" name="confirmacao" type="password" minLength={8} required />
+        <Input id="confirmacao" name="confirmacao" type="password" minLength={SENHA_MINIMA} required />
       </div>
       {estado.erro && (
         <p role="alert" className="text-sm text-destructive">

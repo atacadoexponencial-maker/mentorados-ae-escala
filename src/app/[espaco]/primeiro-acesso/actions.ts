@@ -3,6 +3,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/integrations/supabase/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
+import {
+  SENHA_MINIMA,
+  ERRO_SENHA_CURTA,
+  mensagemDeErroDeSenha,
+} from './mensagens'
 
 export type EstadoPrimeiroAcesso = { erro: string | null }
 
@@ -13,8 +18,8 @@ export async function definirSenha(
   const senha = String(formData.get('senha') ?? '')
   const confirmacao = String(formData.get('confirmacao') ?? '')
 
-  if (senha.length < 8) {
-    return { erro: 'A senha precisa ter pelo menos 8 caracteres' }
+  if (senha.length < SENHA_MINIMA) {
+    return { erro: ERRO_SENHA_CURTA }
   }
   if (senha !== confirmacao) {
     return { erro: 'As senhas não são iguais' }
@@ -30,7 +35,7 @@ export async function definirSenha(
 
   const { error } = await supabase.auth.updateUser({ password: senha })
   if (error) {
-    return { erro: 'Não foi possível salvar a senha. Tente novamente.' }
+    return { erro: mensagemDeErroDeSenha(error) }
   }
 
   // Revendedor pendente é ativado no primeiro acesso (escrita administrativa)
