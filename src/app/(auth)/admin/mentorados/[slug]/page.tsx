@@ -4,7 +4,13 @@ import { ArrowLeft, Eye } from 'lucide-react'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -13,6 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import type { Espaco } from '@/lib/espacos'
+import { PersonalizacaoForm } from '@/app/(auth)/mentor/personalizacao/personalizacao-form'
 
 const statusLabel: Record<string, string> = {
   ativo: 'Ativa',
@@ -39,7 +47,7 @@ export default async function DashboardMentoradoAdminPage({
 
   const { data: espaco } = await admin
     .from('espacos')
-    .select('id, slug, nome_curso, ativo')
+    .select('id, slug, nome_curso, logo_url, banner_url, cor_primaria, cor_destaque, ativo')
     .eq('slug', slug)
     .maybeSingle()
   if (!espaco) notFound()
@@ -100,6 +108,18 @@ export default async function DashboardMentoradoAdminPage({
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Personalização</CardTitle>
+          <CardDescription>
+            A identidade que as revendedoras veem em /{espaco.slug}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PersonalizacaoForm espaco={espaco as Espaco} espacoId={espaco.id} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
