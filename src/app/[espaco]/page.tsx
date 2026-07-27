@@ -5,6 +5,7 @@ import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
 import { formatarDuracao } from '@/lib/mock-data'
 import { createClient } from '@/integrations/supabase/server'
+import { carregarCatalogo } from '@/lib/catalogo'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { Button } from '@/components/ui/button'
 
@@ -33,17 +34,8 @@ export default async function CatalogoPage({
   // Client da sessão: a RLS garante que revendedora só vê aulas publicadas
   // e apenas as próprias visualizações
   const supabase = await createClient()
-  const [{ data: modulos }, { data: aulas }, { data: visualizacoes }] = await Promise.all([
-    supabase
-      .from('modulos')
-      .select('id, titulo, ordem')
-      .order('espaco_id', { nullsFirst: true })
-      .order('ordem'),
-    supabase
-      .from('aulas')
-      .select('id, modulo_id, titulo, capa_url, duracao_segundos, ordem, publicada')
-      .eq('publicada', true)
-      .order('ordem'),
+  const [modulosComTodasAulas, { data: visualizacoes }] = await Promise.all([
+    carregarCatalogo(dados.id),
     supabase
       .from('aula_visualizacoes')
       .select('aula_id, ultima_posicao, concluida_em, updated_at')
@@ -57,13 +49,13 @@ export default async function CatalogoPage({
   const emAndamento = (visualizacoes ?? []).find(
     (v) => !v.concluida_em && v.ultima_posicao > 0
   )
+
+  const todasAulas = modulosComTodasAulas.flatMap((m) => m.aulas)
   const aulaEmAndamento = emAndamento
-    ? (aulas ?? []).find((a) => a.id === emAndamento.aula_id)
+    ? todasAulas.find((a) => a.id === emAndamento.aula_id)
     : undefined
 
-  const modulosComAulas = (modulos ?? [])
-    .map((m) => ({ ...m, aulas: (aulas ?? []).filter((a) => a.modulo_id === m.id) }))
-    .filter((m) => m.aulas.length > 0)
+  const modulosComAulas = modulosComTodasAulas.filter((m) => m.aulas.length > 0)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -110,10 +102,10 @@ export default async function CatalogoPage({
                 </h2>
                 <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card p-4">
                   <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-2xl font-black text-muted-foreground/40">
-                    {aulaEmAndamento.capa_url ? (
+                    {aulaEmAndamento.capaUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={aulaEmAndamento.capa_url}
+                        src={aulaEmAndamento.capaUrl}
                         alt=""
                         className="h-full w-full object-cover"
                       />
@@ -124,8 +116,8 @@ export default async function CatalogoPage({
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-medium">{aulaEmAndamento.titulo}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {aulaEmAndamento.duracao_segundos
-                        ? formatarDuracao(aulaEmAndamento.duracao_segundos)
+                      {aulaEmAndamento.duracaoSegundos
+                        ? formatarDuracao(aulaEmAndamento.duracaoSegundos)
                         : ''}
                     </p>
                   </div>
@@ -158,10 +150,10 @@ export default async function CatalogoPage({
                         className="card-tilt block w-[180px] sm:w-[200px]"
                       >
                         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-border bg-muted">
-                          {aula.capa_url ? (
+                          {aula.capaUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={aula.capa_url}
+                              src={aula.capaUrl}
                               alt={aula.titulo}
                               className="h-full w-full object-cover"
                             />
@@ -175,9 +167,9 @@ export default async function CatalogoPage({
                               <CheckCircle2 className="h-5 w-5 text-primary" />
                             </span>
                           )}
-                          {aula.duracao_segundos ? (
+                          {aula.duracaoSegundos ? (
                             <span className="absolute bottom-2 right-2 rounded bg-background/90 px-1.5 py-0.5 text-xs tabular-nums">
-                              {formatarDuracao(aula.duracao_segundos)}
+                              {formatarDuracao(aula.duracaoSegundos)}
                             </span>
                           ) : null}
                         </div>
