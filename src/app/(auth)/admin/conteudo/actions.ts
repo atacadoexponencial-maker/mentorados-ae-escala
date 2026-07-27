@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
+import { validarImagem, contentTypeDeMaterial, ehUuid } from '@/lib/upload'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
 
@@ -150,23 +151,26 @@ export async function definirCapa(
   if (!aulaId || !(arquivo instanceof File) || arquivo.size === 0) {
     return { ok: false, erro: 'Escolha uma imagem' }
   }
-  if (!arquivo.type.startsWith('image/')) {
-    return { ok: false, erro: 'O arquivo precisa ser uma imagem' }
-  }
   if (arquivo.size > CAPA_MAX_BYTES) {
     return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
+  }
+  const validacao = await validarImagem(arquivo)
+  if (!validacao.ok) {
+    return { ok: false, erro: validacao.erro }
+  }
+  if (!ehUuid(aulaId)) {
+    return { ok: false, erro: 'Acesso negado' }
   }
   if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
   const admin = createAdminClient()
-  const extensao = (arquivo.name.split('.').pop() ?? 'jpg').toLowerCase()
-  const caminho = `capas/${aulaId}.${extensao}`
+  const caminho = `capas/${aulaId}.${validacao.imagem.extensao}`
 
   const { error: erroUpload } = await admin.storage
     .from('conteudo')
-    .upload(caminho, arquivo, { upsert: true, contentType: arquivo.type })
+    .upload(caminho, arquivo, { upsert: true, contentType: validacao.imagem.contentType })
   if (erroUpload) {
     return { ok: false, erro: 'Não foi possível enviar a imagem.' }
   }
@@ -198,17 +202,18 @@ export async function salvarCapaNoEspaco(
   const aulaId = String(formData.get('aulaId') ?? '')
   const espacoId = String(formData.get('espacoId') ?? '')
   const arquivo = formData.get('arquivo')
-  if (!aulaId || !espacoId) {
+  if (!ehUuid(aulaId) || !ehUuid(espacoId)) {
     return { ok: false, erro: 'Acesso negado' }
   }
   if (!(arquivo instanceof File) || arquivo.size === 0) {
     return { ok: false, erro: 'Escolha uma imagem' }
   }
-  if (!arquivo.type.startsWith('image/')) {
-    return { ok: false, erro: 'O arquivo precisa ser uma imagem' }
-  }
   if (arquivo.size > CAPA_MAX_BYTES) {
     return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
+  }
+  const validacao = await validarImagem(arquivo)
+  if (!validacao.ok) {
+    return { ok: false, erro: validacao.erro }
   }
 
   const admin = createAdminClient()
@@ -221,11 +226,10 @@ export async function salvarCapaNoEspaco(
     return { ok: false, erro: 'Acesso negado' }
   }
 
-  const extensao = (arquivo.name.split('.').pop() ?? 'jpg').toLowerCase()
-  const caminho = `capas/${aulaId}-${espacoId}.${extensao}`
+  const caminho = `capas/${aulaId}-${espacoId}.${validacao.imagem.extensao}`
   const { error: erroUpload } = await admin.storage
     .from('conteudo')
-    .upload(caminho, arquivo, { upsert: true, contentType: arquivo.type })
+    .upload(caminho, arquivo, { upsert: true, contentType: validacao.imagem.contentType })
   if (erroUpload) {
     return { ok: false, erro: 'Não foi possível enviar a imagem.' }
   }
@@ -470,6 +474,9 @@ export async function adicionarMaterialArquivo(
   if (arquivo.size > MATERIAL_MAX_BYTES) {
     return { ok: false, erro: 'Arquivo muito grande (máximo 20 MB)' }
   }
+  if (!ehUuid(aulaId)) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
   if (!(await conteudoNoEscopo('aulas', aulaId, escopo))) {
     return { ok: false, erro: 'Acesso negado' }
   }
@@ -480,7 +487,7 @@ export async function adicionarMaterialArquivo(
 
   const { error: erroUpload } = await admin.storage
     .from('conteudo')
-    .upload(caminho, arquivo, { contentType: arquivo.type || 'application/octet-stream' })
+    .upload(caminho, arquivo, { contentType: contentTypeDeMaterial(arquivo) })
   if (erroUpload) {
     return { ok: false, erro: 'Não foi possível enviar o arquivo.' }
   }
