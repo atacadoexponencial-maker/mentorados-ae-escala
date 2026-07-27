@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Eye } from 'lucide-react'
 import { createAdminClient } from '@/integrations/supabase/admin'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -72,6 +73,17 @@ export default async function DashboardMentoradoAdminPage({
         <Badge variant={espaco.ativo ? 'default' : 'secondary'}>
           {espaco.ativo ? 'Ativo' : 'Inativo'}
         </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          render={
+            <a href={`/${espaco.slug}`} target="_blank" rel="noopener noreferrer" />
+          }
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          Ver área de membros
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
