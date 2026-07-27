@@ -66,6 +66,10 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
             {espacoId && <input type="hidden" name="espacoId" value={espacoId} />}
             <div className="space-y-2">
               <Label htmlFor="logo">Logo</Label>
+              <p className="text-xs text-muted-foreground">
+                PNG, JPG ou WEBP até 2 MB. Quadrada (ex.: 512×512 px) e com fundo transparente
+                fica melhor — ela aparece pequena e redonda no topo.
+              </p>
               <div className="flex items-center gap-3">
                 {logoPrevia ? (
                   <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-border">
@@ -106,6 +110,10 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
 
             <div className="space-y-2">
               <Label htmlFor="banner">Banner do topo</Label>
+              <p className="text-xs text-muted-foreground">
+                PNG, JPG ou WEBP até 5 MB. Use 2400×960 px — outras proporções são cortadas nas
+                laterais ou em cima e embaixo. Sem banner, entra um degradê com as suas cores.
+              </p>
               {bannerPrevia ? (
                 <div className="overflow-hidden rounded-lg border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
