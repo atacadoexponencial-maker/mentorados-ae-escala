@@ -67,14 +67,14 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
             <div className="space-y-2">
               <Label htmlFor="logo">Logo</Label>
               <p className="text-xs text-muted-foreground">
-                PNG, JPG ou WEBP até 2 MB. Quadrada (ex.: 512×512 px) e com fundo transparente
-                fica melhor — ela aparece pequena e redonda no topo.
+                PNG, JPG ou WEBP até 2 MB. Quadrada (ex.: 512×512 px). Ela é recortada em
+                círculo, então deixe o símbolo no centro — as quinas não aparecem.
               </p>
               <div className="flex items-center gap-3">
                 {logoPrevia ? (
                   <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-border">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logoPrevia} alt="Logo" className="h-9 w-9 object-contain" />
+                    <img src={logoPrevia} alt="Logo" className="h-full w-full object-cover" />
                   </div>
                 ) : (
                   <div className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-border text-xs text-muted-foreground">
@@ -229,7 +229,7 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
               {logoPrevia ? (
                 <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={logoPrevia} alt="" className="h-5 w-5 object-contain" />
+                  <img src={logoPrevia} alt="" className="h-full w-full object-cover" />
                 </span>
               ) : null}
               <span className="text-sm font-semibold">{nomeCurso || 'Nome do curso'}</span>
