@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
-import { validarImagem, contentTypeDeMaterial, ehUuid } from '@/lib/upload'
+import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES } from '@/lib/upload'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
 
@@ -135,7 +135,6 @@ export async function criarAula(
   return { ok: true, erro: null }
 }
 
-const CAPA_MAX_BYTES = 2 * 1024 * 1024
 
 export async function definirCapa(
   _estadoAnterior: EstadoConteudo,
@@ -151,7 +150,7 @@ export async function definirCapa(
   if (!aulaId || !(arquivo instanceof File) || arquivo.size === 0) {
     return { ok: false, erro: 'Escolha uma imagem' }
   }
-  if (arquivo.size > CAPA_MAX_BYTES) {
+  if (arquivo.size > LIMITES.capa) {
     return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
   }
   const validacao = await validarImagem(arquivo)
@@ -208,7 +207,7 @@ export async function salvarCapaNoEspaco(
   if (!(arquivo instanceof File) || arquivo.size === 0) {
     return { ok: false, erro: 'Escolha uma imagem' }
   }
-  if (arquivo.size > CAPA_MAX_BYTES) {
+  if (arquivo.size > LIMITES.capa) {
     return { ok: false, erro: 'Imagem muito grande (máximo 2 MB)' }
   }
   const validacao = await validarImagem(arquivo)
@@ -441,7 +440,6 @@ export async function excluirAula(aulaId: string): Promise<void> {
   revalidarConteudo()
 }
 
-const MATERIAL_MAX_BYTES = 20 * 1024 * 1024
 
 function sanitizarNomeArquivo(nome: string): string {
   return nome.replace(/[\\/]/g, '_').replace(/[^\p{L}\p{N}._ -]/gu, '').trim() || 'arquivo'
@@ -471,7 +469,7 @@ export async function adicionarMaterialArquivo(
   if (!aulaId || !(arquivo instanceof File) || arquivo.size === 0) {
     return { ok: false, erro: 'Escolha um arquivo' }
   }
-  if (arquivo.size > MATERIAL_MAX_BYTES) {
+  if (arquivo.size > LIMITES.material) {
     return { ok: false, erro: 'Arquivo muito grande (máximo 20 MB)' }
   }
   if (!ehUuid(aulaId)) {

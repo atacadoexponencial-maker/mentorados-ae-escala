@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { LIMITES, erroDeTamanho } from '@/lib/upload'
 
 const estadoInicial: EstadoPersonalizacao = { ok: false, erro: null }
 
@@ -23,13 +24,22 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
   const inputLogoRef = useRef<HTMLInputElement>(null)
   const inputBannerRef = useRef<HTMLInputElement>(null)
   const [estado, acao, pendente] = useActionState(salvarPersonalizacao, estadoInicial)
+  // Erro detectado no próprio navegador, antes de enviar. O servidor continua
+  // validando: isto é aviso, não autorização.
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null)
 
   const aoEscolherLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const arquivo = e.target.files?.[0]
-    if (arquivo) {
-      setLogoPrevia(URL.createObjectURL(arquivo))
-      setRemoverLogo(false)
+    if (!arquivo) return
+    const erro = erroDeTamanho(arquivo, LIMITES.logo, 'A logo')
+    if (erro) {
+      setErroArquivo(erro)
+      e.target.value = ''
+      return
     }
+    setErroArquivo(null)
+    setLogoPrevia(URL.createObjectURL(arquivo))
+    setRemoverLogo(false)
   }
 
   const aoRemoverLogo = () => {
@@ -40,10 +50,16 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
 
   const aoEscolherBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
     const arquivo = e.target.files?.[0]
-    if (arquivo) {
-      setBannerPrevia(URL.createObjectURL(arquivo))
-      setRemoverBanner(false)
+    if (!arquivo) return
+    const erro = erroDeTamanho(arquivo, LIMITES.banner, 'O banner')
+    if (erro) {
+      setErroArquivo(erro)
+      e.target.value = ''
+      return
     }
+    setErroArquivo(null)
+    setBannerPrevia(URL.createObjectURL(arquivo))
+    setRemoverBanner(false)
   }
 
   const aoRemoverBanner = () => {
@@ -199,19 +215,24 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
               </div>
             </div>
 
-            {estado.erro && (
+            {erroArquivo && (
+              <p role="alert" className="text-sm text-destructive">
+                {erroArquivo} Escolha um arquivo menor ou reduza a imagem antes de enviar.
+              </p>
+            )}
+            {estado.erro && !erroArquivo && (
               <p role="alert" className="text-sm text-destructive">
                 {estado.erro}
               </p>
             )}
-            {estado.ok && (
+            {estado.ok && !erroArquivo && (
               <p role="status" className="text-sm text-muted-foreground">
                 Personalização salva! Suas revendedoras já veem a nova identidade.
               </p>
             )}
 
             <Separator />
-            <Button type="submit" disabled={pendente}>
+            <Button type="submit" disabled={pendente || erroArquivo !== null}>
               {pendente ? 'Salvando…' : 'Salvar'}
             </Button>
           </form>

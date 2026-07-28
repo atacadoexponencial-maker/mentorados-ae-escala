@@ -78,6 +78,30 @@ export function contentTypeDeMaterial(arquivo: File): string {
   return 'application/octet-stream'
 }
 
+// Limites de tamanho, em um lugar só porque servidor e formulário precisam do
+// mesmo número: o servidor para recusar, o formulário para avisar antes de
+// enviar. Sem o aviso no formulário, um arquivo grande estoura o limite de
+// corpo do Server Action e o Next devolve "A server error occurred" — a
+// requisição nem chega na validação. Ao mexer aqui, conferir
+// `serverActions.bodySizeLimit` no next.config.ts, que precisa comportar o
+// maior destes valores.
+export const LIMITES = {
+  logo: 2 * 1024 * 1024,
+  banner: 5 * 1024 * 1024,
+  capa: 2 * 1024 * 1024,
+  material: 20 * 1024 * 1024,
+} as const
+
+function emMB(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`
+}
+
+// Retorna a mensagem de erro, ou null se o tamanho está bom.
+export function erroDeTamanho(arquivo: File, maximo: number, rotulo: string): string | null {
+  if (arquivo.size <= maximo) return null
+  return `${rotulo} tem ${emMB(arquivo.size)} — o máximo é ${emMB(maximo)}.`
+}
+
 // Ids que entram na composição de caminhos do Storage precisam ser UUID: vindos
 // de formulário, uma string livre permitiria subir de pasta com `../`.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

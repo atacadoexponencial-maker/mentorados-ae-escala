@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useTransition } from 'react'
+import { useActionState, useState, useTransition } from 'react'
 import { FileText, Link2, Trash2 } from 'lucide-react'
 import {
   adicionarMaterialArquivo,
@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { LIMITES, erroDeTamanho } from '@/lib/upload'
 
 const estadoInicial: EstadoConteudo = { ok: false, erro: null }
 
@@ -36,6 +37,17 @@ export function MateriaisDialog({
   )
   const [estadoLink, acaoLink, pendenteLink] = useActionState(adicionarMaterialLink, estadoInicial)
   const [removendo, iniciarRemocao] = useTransition()
+  // Aviso do próprio navegador: acima do limite, o corpo do Server Action
+  // estoura e o erro que voltaria seria genérico.
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null)
+
+  const aoEscolherArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0]
+    if (!arquivo) return setErroArquivo(null)
+    const erro = erroDeTamanho(arquivo, LIMITES.material, 'O arquivo')
+    if (erro) e.target.value = ''
+    setErroArquivo(erro)
+  }
 
   return (
     <Dialog open={aula !== null} onOpenChange={(aberto) => !aberto && onClose()}>
@@ -82,14 +94,24 @@ export function MateriaisDialog({
               <input type="hidden" name="aulaId" value={aula.id} />
               <Label htmlFor="material-arquivo">Anexar arquivo (até 20 MB)</Label>
               <div className="flex items-center gap-2">
-                <Input id="material-arquivo" name="arquivo" type="file" required />
-                <Button type="submit" variant="outline" disabled={pendenteArquivo}>
+                <Input
+                  id="material-arquivo"
+                  name="arquivo"
+                  type="file"
+                  onChange={aoEscolherArquivo}
+                  required
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={pendenteArquivo || erroArquivo !== null}
+                >
                   {pendenteArquivo ? 'Enviando…' : 'Anexar'}
                 </Button>
               </div>
-              {estadoArquivo.erro && (
+              {(erroArquivo || estadoArquivo.erro) && (
                 <p role="alert" className="text-sm text-destructive">
-                  {estadoArquivo.erro}
+                  {erroArquivo ?? estadoArquivo.erro}
                 </p>
               )}
             </form>

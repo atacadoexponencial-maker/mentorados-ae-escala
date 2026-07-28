@@ -4,13 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo } from '@/app/(auth)/admin/conteudo/escopo'
 import { podeSalvarPersonalizacao } from './autorizacao'
-import { validarImagem, ehUuid } from '@/lib/upload'
+import { validarImagem, ehUuid, LIMITES } from '@/lib/upload'
 
 export type EstadoPersonalizacao = { ok: boolean; erro: string | null }
 
 const COR_VALIDA = /^#[0-9a-f]{6}$/i
-const LOGO_MAX_BYTES = 2 * 1024 * 1024
-const BANNER_MAX_BYTES = 5 * 1024 * 1024
 
 export async function salvarPersonalizacao(
   _estadoAnterior: EstadoPersonalizacao,
@@ -61,7 +59,7 @@ export async function salvarPersonalizacao(
     const caminhos = (arquivos ?? []).map((a) => `logos/${a.name}`)
     if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
   } else if (logo instanceof File && logo.size > 0) {
-    if (logo.size > LOGO_MAX_BYTES) {
+    if (logo.size > LIMITES.logo) {
       return { ok: false, erro: 'Logo muito grande (máximo 2 MB)' }
     }
     const validacao = await validarImagem(logo)
@@ -89,7 +87,7 @@ export async function salvarPersonalizacao(
     const caminhos = (arquivos ?? []).map((a) => `banners/${a.name}`)
     if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
   } else if (banner instanceof File && banner.size > 0) {
-    if (banner.size > BANNER_MAX_BYTES) {
+    if (banner.size > LIMITES.banner) {
       return { ok: false, erro: 'Banner muito grande (máximo 5 MB)' }
     }
     const validacao = await validarImagem(banner)
