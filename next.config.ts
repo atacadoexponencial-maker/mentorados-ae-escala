@@ -34,6 +34,16 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // O padrão do Next é 1 MB, abaixo do que o app aceita: material de apoio
+      // vai até 20 MB, e logo (2 MB) + banner (5 MB) sobem no mesmo formulário.
+      // Estourando o limite, o Next recusa antes da action rodar e a tela mostra
+      // "A server error occurred", sem chance de dar uma mensagem melhor.
+      // Os limites por arquivo estão em LIMITES, em src/lib/upload.ts.
+      bodySizeLimit: "22mb",
+    },
+  },
   async headers() {
     return [
       {

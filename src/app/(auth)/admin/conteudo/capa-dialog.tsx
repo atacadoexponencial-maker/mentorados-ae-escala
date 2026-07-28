@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { definirCapa, salvarCapaNoEspaco, type EstadoConteudo } from './actions'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LIMITES, erroDeTamanho } from '@/lib/upload'
 
 const estadoInicial: EstadoConteudo = { ok: false, erro: null }
 
@@ -34,9 +35,21 @@ export function CapaDialog({
     estadoInicial
   )
 
+  // Aviso do próprio navegador: acima do limite, o corpo do Server Action
+  // estoura e o erro que voltaria seria genérico.
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null)
+
   useEffect(() => {
     if (estado.ok) onClose()
   }, [estado, onClose])
+
+  const aoEscolherArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0]
+    if (!arquivo) return setErroArquivo(null)
+    const erro = erroDeTamanho(arquivo, LIMITES.capa, 'A imagem')
+    if (erro) e.target.value = ''
+    setErroArquivo(erro)
+  }
 
   return (
     <Dialog open={aula !== null} onOpenChange={(aberto) => !aberto && onClose()}>
@@ -62,16 +75,17 @@ export function CapaDialog({
                 name="arquivo"
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={aoEscolherArquivo}
                 required
               />
             </div>
-            {estado.erro && (
+            {(erroArquivo || estado.erro) && (
               <p role="alert" className="text-sm text-destructive">
-                {estado.erro}
+                {erroArquivo ?? estado.erro}
               </p>
             )}
             <DialogFooter>
-              <Button type="submit" disabled={pendente}>
+              <Button type="submit" disabled={pendente || erroArquivo !== null}>
                 {pendente ? 'Enviando…' : 'Salvar capa'}
               </Button>
             </DialogFooter>
