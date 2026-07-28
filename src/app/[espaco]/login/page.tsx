@@ -18,7 +18,11 @@ export default async function LoginPage({
           {dados.logo_url ? (
             <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={dados.logo_url} alt={dados.nome_curso} className="h-10 w-10 object-contain" />
+              <img
+                src={dados.logo_url}
+                alt={dados.nome_curso}
+                className="h-full w-full object-cover"
+              />
             </div>
           ) : null}
           <div className="space-y-1">

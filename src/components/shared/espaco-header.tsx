@@ -21,7 +21,11 @@ export function EspacoHeader({ espaco, emailUsuario }: { espaco: Espaco; emailUs
           {espaco.logo_url ? (
             <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={espaco.logo_url} alt={espaco.nome_curso} className="h-5 w-5 object-contain" />
+              <img
+                src={espaco.logo_url}
+                alt={espaco.nome_curso}
+                className="h-full w-full object-cover"
+              />
             </span>
           ) : null}
           <span className="text-sm font-semibold">{espaco.nome_curso}</span>
