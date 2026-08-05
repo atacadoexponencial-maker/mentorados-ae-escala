@@ -539,10 +539,14 @@ export async function adicionarMaterialLink(
   }
 
   const admin = createAdminClient()
+  // A `origem` vai explícita de propósito, mesmo com o `DEFAULT 'link'` da
+  // coluna: assim esta função fica simétrica a `adicionarMaterialArquivo` e não
+  // depende de uma decisão de migração para gravar o valor certo.
   const { error } = await admin.from('aula_materiais').insert({
     aula_id: aulaId,
     nome,
     url,
+    origem: 'link',
     ordem: await proximaOrdemMaterial(aulaId),
   })
   if (error) {
