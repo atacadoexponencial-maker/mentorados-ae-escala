@@ -1,0 +1,17 @@
+-- Remove a leitura direta de `storage.objects` concedida a anon/authenticated.
+--
+-- A policy criada em 20260707210000 existia para "leitura pública" do bucket,
+-- mas leitura de bucket público NÃO passa por ela: o endpoint
+-- `/storage/v1/object/public/<bucket>/<caminho>` serve o arquivo sem consultar
+-- RLS. O que a policy de fato habilitava era a API de LISTAGEM
+-- (`POST /storage/v1/object/list/conteudo`), que com a chave anônima — pública
+-- por natureza, vai no bundle do navegador — devolvia o índice completo do
+-- bucket: todas as capas, logos e banners de todas as marcas.
+--
+-- Os caminhos são UUIDs (`capas/<aulaId>.png`), impossíveis de adivinhar. Sem o
+-- índice, o endereço de cada arquivo volta a ser conhecido só por quem já o
+-- recebeu do app.
+--
+-- Escrita/remoção seguem funcionando: o app só toca o Storage pelo client de
+-- serviço, que ignora RLS.
+DROP POLICY IF EXISTS "conteudo_leitura_publica" ON storage.objects;
