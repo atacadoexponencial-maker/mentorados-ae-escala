@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import {
   ItemMaterialDialog,
@@ -31,6 +31,32 @@ function resolucaoControlada() {
   )
   return { resolver, liberar: (valor: { url: string } | null = null) => liberar(valor) }
 }
+
+/**
+ * Substituição de `window.location` por `Object.defineProperty`: o jsdom recusa
+ * `vi.spyOn(window.location, 'assign')` com `TypeError: Cannot redefine property`.
+ * O original é guardado aqui e restaurado no `afterEach` — sem isso os outros
+ * casos herdariam o stub.
+ */
+const locationOriginal = window.location
+
+function stubDeLocation() {
+  const assign = vi.fn()
+  Object.defineProperty(window, 'location', {
+    value: { ...locationOriginal, assign },
+    configurable: true,
+    writable: true,
+  })
+  return assign
+}
+
+afterEach(() => {
+  Object.defineProperty(window, 'location', {
+    value: locationOriginal,
+    configurable: true,
+    writable: true,
+  })
+})
 
 function renderizarItem({
   material,
@@ -104,6 +130,19 @@ describe('ItemMaterialDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Planilha privada' }))
     await waitFor(() => expect(resolver).toHaveBeenCalledTimes(2))
     expect(await screen.findByRole('alert')).toHaveTextContent('Material indisponível.')
+  })
+
+  it('abre o endereço recebido na aba atual quando a resolução devolve url', async () => {
+    const assign = stubDeLocation()
+    const url = 'https://projeto.supabase.co/storage/v1/object/sign/materiais/a/1-Guia.pdf?token=abc'
+    const resolver = vi.fn(async () => ({ url }))
+    renderizarItem({ material: arquivo, resolver })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Planilha privada' }))
+
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1))
+    expect(assign).toHaveBeenCalledWith(url)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('cai na mesma mensagem quando a resolução lança exceção', async () => {
