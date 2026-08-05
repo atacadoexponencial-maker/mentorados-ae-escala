@@ -564,7 +564,7 @@ export async function removerMaterial(materialId: string): Promise<void> {
 
   const { data: material } = await admin
     .from('aula_materiais')
-    .select('url, aula_id')
+    .select('url, aula_id, origem')
     .eq('id', materialId)
     .maybeSingle()
   if (!material) return
@@ -572,10 +572,20 @@ export async function removerMaterial(materialId: string): Promise<void> {
 
   await admin.from('aula_materiais').delete().eq('id', materialId)
 
-  // Se era upload nosso, remove o arquivo do bucket
-  const prefixo = '/storage/v1/object/public/conteudo/'
-  if (material?.url.includes(prefixo)) {
-    const caminho = decodeURIComponent(material.url.split(prefixo)[1] ?? '')
+  // A origem é a única fonte de verdade: `url` de linha de arquivo é o caminho
+  // interno completo dentro do bucket privado e vai cru para o Storage.
+  // O retorno é descartado de propósito — remoção de material não devolve erro
+  // para a usuária, e a linha já saiu do banco.
+  const PREFIXO_PUBLICO_LEGADO = '/storage/v1/object/public/conteudo/'
+  if (material.origem === 'arquivo') {
+    await admin.storage.from(BUCKET_MATERIAIS).remove([material.url])
+  } else if (material.url.includes(PREFIXO_PUBLICO_LEGADO)) {
+    // Transitório até a issue 13 migrar as linhas antigas: linha gravada antes
+    // desta feature ficou com `origem = 'link'` pelo DEFAULT, mas aponta para um
+    // objeto público em `conteudo`. Sem este ramo, apagar a linha deixaria o
+    // arquivo público e órfão para sempre. Aqui `url` é URL de verdade, então o
+    // `decodeURIComponent` é necessário — e some junto com o ramo.
+    const caminho = decodeURIComponent(material.url.split(PREFIXO_PUBLICO_LEGADO)[1] ?? '')
     if (caminho) await admin.storage.from('conteudo').remove([caminho])
   }
 
