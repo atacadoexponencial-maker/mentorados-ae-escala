@@ -423,11 +423,20 @@ export async function excluirAula(aulaId: string): Promise<void> {
 
   await admin.from('aulas').delete().eq('id', aulaId)
 
-  // Limpa arquivos do storage (capa + materiais enviados)
-  const { data: arquivosMateriais } = await admin.storage
+  // Limpa arquivos do storage. São DOIS destinos: as capas continuam no bucket
+  // público `conteudo` e os materiais agora moram no bucket privado
+  // BUCKET_MATERIAIS. Os retornos de `list`/`remove` são descartados de
+  // propósito — a ação é `void` e a aula já saiu do banco.
+
+  // Transitório até a issue 13 migrar os arquivos antigos: material gravado
+  // antes desta feature ficou em `conteudo/materiais/<aulaId>/`, num bucket
+  // PÚBLICO. Como o DELETE da aula já derrubou as linhas por cascade, ninguém
+  // mais conseguiria achar esse objeto — o órfão seria permanente e baixável.
+  // Some junto com o ramo legado de `removerMaterial`.
+  const { data: legadoMateriais } = await admin.storage
     .from('conteudo')
     .list(`materiais/${aulaId}`)
-  const caminhos = (arquivosMateriais ?? []).map((a) => `materiais/${aulaId}/${a.name}`)
+  const caminhos = (legadoMateriais ?? []).map((a) => `materiais/${aulaId}/${a.name}`)
   for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
     caminhos.push(`capas/${aulaId}.${ext}`)
   }
@@ -437,6 +446,22 @@ export async function excluirAula(aulaId: string): Promise<void> {
     .list('capas', { search: `${aulaId}-` })
   for (const a of capasMarca ?? []) caminhos.push(`capas/${a.name}`)
   if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
+
+  // Materiais no bucket privado. O prefixo é só `<aulaId>` — `materiais/` virou
+  // o nome do bucket. A listagem é paginada porque `list()` trunca em 100 por
+  // padrão (e uma aula pode ter mais que isso); a ordenação default (`name`
+  // asc) é estável, e o `remove` só roda depois que a listagem terminou, então
+  // paginar por `offset` é seguro.
+  const LIMITE_PAGINA = 100
+  const materiais: string[] = []
+  for (let offset = 0; ; offset += LIMITE_PAGINA) {
+    const { data: pagina } = await admin.storage
+      .from(BUCKET_MATERIAIS)
+      .list(aulaId, { limit: LIMITE_PAGINA, offset })
+    for (const a of pagina ?? []) materiais.push(`${aulaId}/${a.name}`)
+    if ((pagina?.length ?? 0) < LIMITE_PAGINA) break
+  }
+  if (materiais.length) await admin.storage.from(BUCKET_MATERIAIS).remove(materiais)
 
   revalidarConteudo()
 }
