@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { FileText, Loader2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { emitirLinkDeMaterial } from '@/lib/materiais/emitir-link'
 
 /**
  * Contrato de dados dos materiais da aula.
@@ -21,17 +22,15 @@ export type MaterialItem =
 export type ResolverLinkDoMaterial = (id: string) => Promise<{ url: string } | null>
 
 /**
- * Marcador do protótipo: devolve sempre `null` (= indisponível).
+ * Emissor real: a Server Action de `@/lib/materiais/emitir-link`, que confere a
+ * sessão, deixa a RLS decidir o direito e assina o endereço temporário.
  *
- * TODO(issue 11): só o **corpo** desta função muda ao ligar o emissor de link
- * temporário da issue 05. A união `MaterialItem`, a máquina de estados de
- * `ItemMaterialArquivo`, a marcação e o CSS ficam intactos. `null` continua
- * significando "indisponível por qualquer motivo" — a tela nunca distingue a causa.
+ * A anotação `: ResolverLinkDoMaterial` é o que faz o compilador provar que a
+ * action satisfaz o contrato do componente — não trocar por inferência. `null`
+ * continua significando "indisponível por qualquer motivo" (sem sessão, sem
+ * direito, arquivo sumido, Storage fora do ar): a tela nunca distingue a causa.
  */
-const resolverLinkDoMaterial: ResolverLinkDoMaterial = async (id) => {
-  void id
-  return null
-}
+const resolverLinkDoMaterial: ResolverLinkDoMaterial = emitirLinkDeMaterial
 
 function ItemMaterialArquivo({
   material,
@@ -57,6 +56,12 @@ function ItemMaterialArquivo({
         // Abertura na aba atual de propósito: depois do `await`, `window.open` é
         // barrado por bloqueador de pop-up. Como o endereço assinado responde com
         // `Content-Disposition` de download, a página da aula não é substituída.
+        //
+        // CONFIRMADO NO NAVEGADOR (issue 11, PDF real de material acentuado): a
+        // resposta vem `attachment; filename*=UTF-8''Relat%C3%B3rio%20de%20Pre%C3%A7os...`,
+        // o arquivo cai no gerenciador de downloads com o nome amigável do banco,
+        // a URL da barra de endereço não muda, `history.length` não cresce e o
+        // iframe do player continua o mesmo nó (não remontou).
         window.location.assign(resultado.url)
       } catch {
         // Exceção inesperada cai na mesma mensagem: sem detalhe técnico, sem

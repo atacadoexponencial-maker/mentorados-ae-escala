@@ -7,6 +7,7 @@ import { getVinculoDoUsuario } from '@/lib/vinculo'
 import { ehPreview } from '@/lib/preview'
 import { createClient } from '@/integrations/supabase/server'
 import { carregarCatalogo } from '@/lib/catalogo'
+import { materialParaCliente } from '@/lib/materiais/regras'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { FaixaPreview } from '@/components/shared/faixa-preview'
 import { PandaPlayer } from '@/components/shared/panda-player'
@@ -62,7 +63,7 @@ export default async function AulaPage({
 
   const { data: materiais } = await supabase
     .from('aula_materiais')
-    .select('id, nome, url')
+    .select('id, nome, url, origem')
     .eq('aula_id', aula.id)
     .order('ordem')
 
@@ -119,17 +120,7 @@ export default async function AulaPage({
           {aula.descricao && <p className="text-sm leading-relaxed">{aula.descricao}</p>}
         </div>
 
-        {/* A coluna de origem só chega na issue 04: hoje toda linha de aula_materiais
-            é link externo (a pasta materiais/ do bucket está vazia em produção), então
-            `origem` é fixo em 'link' — sem inspecionar o texto de `url`. */}
-        <MateriaisAula
-          materiais={(materiais ?? []).map((material) => ({
-            id: material.id,
-            nome: material.nome,
-            origem: 'link' as const,
-            url: material.url,
-          }))}
-        />
+        <MateriaisAula materiais={(materiais ?? []).map(materialParaCliente)} />
 
         <div className="mt-8 flex items-center justify-between gap-4">
           {anterior ? (
