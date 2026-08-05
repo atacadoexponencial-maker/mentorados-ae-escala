@@ -5,6 +5,7 @@ import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
 import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES } from '@/lib/upload'
+import { BUCKET_MATERIAIS, chaveDeArquivo } from '@/lib/materiais/regras'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
 
@@ -480,28 +481,36 @@ export async function adicionarMaterialArquivo(
   }
 
   const admin = createAdminClient()
+  // `nome` vai íntegro para o banco (com acento — é o nome amigável do
+  // download); só a chave do Storage passa por `chaveDeArquivo`, que a força a
+  // ASCII. O bucket recusa chave acentuada com `InvalidKey`. A ordem importa:
+  // `sanitizarNomeArquivo` já trocou `/` e `\` por `_` antes, então nada aqui
+  // consegue subir de pasta. O primeiro segmento é `aulaId`, barrado por
+  // `ehUuid` acima. O prefixo `materiais/` sumiu: agora é o nome do bucket.
   const nome = sanitizarNomeArquivo(arquivo.name)
-  const caminho = `materiais/${aulaId}/${Date.now()}-${nome}`
+  const caminho = `${aulaId}/${Date.now()}-${chaveDeArquivo(nome)}`
 
   const { error: erroUpload } = await admin.storage
-    .from('conteudo')
+    .from(BUCKET_MATERIAIS)
     .upload(caminho, arquivo, { contentType: contentTypeDeMaterial(arquivo) })
   if (erroUpload) {
     return { ok: false, erro: 'Não foi possível enviar o arquivo.' }
   }
 
-  const {
-    data: { publicUrl },
-  } = admin.storage.from('conteudo').getPublicUrl(caminho)
-
+  // `url` guarda o CAMINHO INTERNO do bucket privado, não uma URL pública: quem
+  // baixa é o emissor de link assinado (`src/lib/materiais/emitir-link.ts`).
+  // `origem: 'arquivo'` é explícito de propósito — a coluna tem
+  // `DEFAULT 'link'`, e uma linha de arquivo nascida como link jamais seria
+  // assinada, ficando permanentemente indisponível.
   const { error } = await admin.from('aula_materiais').insert({
     aula_id: aulaId,
     nome,
-    url: publicUrl,
+    url: caminho,
+    origem: 'arquivo',
     ordem: await proximaOrdemMaterial(aulaId),
   })
   if (error) {
-    await admin.storage.from('conteudo').remove([caminho])
+    await admin.storage.from(BUCKET_MATERIAIS).remove([caminho])
     return { ok: false, erro: 'Não foi possível salvar o material.' }
   }
 

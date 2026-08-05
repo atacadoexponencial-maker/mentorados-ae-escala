@@ -33,6 +33,54 @@ export const BUCKET_MATERIAIS = 'materiais'
 // conserto é subir este número (900 = 15 min) e nada mais.
 export const PRAZO_LINK_SEGUNDOS = 300
 
+// Nome ASCII para o SEGMENTO FINAL da chave do objeto no Storage.
+//
+// ACHADO VERIFICADO (curl com o service role, contra o projeto real, nos dois
+// buckets): o Supabase Storage RECUSA chave fora do ASCII.
+//
+//   PUT .../object/materiais/<uuid>/1-Guia de Preços.pdf
+//     -> 400 {"error":"InvalidKey","message":"Invalid key: ..."}
+//   PUT .../object/conteudo/materiais/<uuid>/1-Guia de Preços.pdf
+//     -> 400 InvalidKey  (idêntico — o caminho de produção de hoje)
+//   PUT .../object/materiais/<uuid>/3-文書.pdf            -> 400 InvalidKey
+//   PUT .../object/materiais/<uuid>/2-Guia de Precos.pdf  -> 200
+//   PUT .../object/materiais/<uuid>/4-Guia_de-Precos v2.pdf -> 200
+//
+// Ou seja: espaço, `_`, `-`, `.` e ASCII alfanumérico passam; letra acentuada e
+// qualquer não-ASCII não passam. Anexar um material chamado `Guia de Preços.pdf`
+// JÁ FALHAVA antes do bucket privado, com a mensagem genérica "Não foi possível
+// enviar o arquivo." — é o nome mais típico em português.
+//
+// POR QUE ISTO NÃO É `sanitizarNomeArquivo`: aquele valor tem dois destinos e só
+// um é restrito. `aula_materiais.nome` é o nome amigável, exibido na lista e
+// usado como `download` do link assinado — acento ali é DESEJÁVEL e já funciona
+// (o emissor corrige a dupla codificação e o header sai
+// `filename*=UTF-8''Relat%C3%B3rio.pdf`). Tirar acento do `nome` pioraria o
+// produto. Só a chave do Storage precisa ser ASCII, e é só nela que esta função
+// é aplicada:
+//
+//   nome    = sanitizarNomeArquivo(arquivo.name)   // display + banco, com acento
+//   caminho = `${aulaId}/${Date.now()}-${chaveDeArquivo(nome)}`
+//
+// A regra: normalizar em NFD e jogar fora os diacríticos combinantes (`\p{M}`),
+// para que `ç`→`c`, `é`→`e`, `ã`→`a` e a chave continue legível; depois manter
+// só a whitelist `[A-Za-z0-9._ -]`. Se o que sobra não tem nenhum alfanumérico
+// fora da extensão (nome inteiramente CJK/cirílico, ou só pontuação), cai em
+// `'arquivo'`. Perder a extensão nesse caso extremo é irrelevante: o
+// `Content-Type` é gravado explicitamente por `contentTypeDeMaterial` e o nome
+// do download vem de `aula_materiais.nome`, nunca da chave.
+export function chaveDeArquivo(nome: string): string {
+  const limpo = nome
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^A-Za-z0-9._ -]/g, '')
+    .trim()
+  // O miolo (tudo menos a extensão final) é o que precisa ter substância: um
+  // resto como `.pdf`, vindo de `文書.pdf`, não identifica arquivo nenhum.
+  const miolo = limpo.replace(/\.[A-Za-z0-9]+$/, '')
+  return /[A-Za-z0-9]/.test(miolo) ? limpo : 'arquivo'
+}
+
 // Só linha de arquivo é assinável.
 //
 // Por que `origem = 'link'` nunca é assinada: `url` de um link externo é um
