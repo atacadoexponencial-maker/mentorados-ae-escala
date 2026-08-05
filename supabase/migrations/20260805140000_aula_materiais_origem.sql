@@ -1,0 +1,45 @@
+-- Marca a origem de cada material: arquivo do armazenamento ou link externo.
+--
+-- Por que a coluna existe:
+-- hoje a distinção é feita procurando o prefixo `/storage/v1/object/public/conteudo/`
+-- dentro de `url` (ver `removerMaterial` em src/app/(auth)/admin/conteudo/actions.ts).
+-- Esse truque quebra assim que o arquivo passa a viver no bucket PRIVADO `materiais`,
+-- onde `url` guarda o caminho interno do objeto e não um endereço público. A origem
+-- precisa ser um dado da linha, não uma inferência sobre o texto da URL.
+--
+-- Significado de `url` passa a depender da origem:
+-- `'arquivo'` -> caminho interno do objeto no bucket `materiais` (nunca entregue ao
+-- navegador; o download sai por link assinado gerado no servidor);
+-- `'link'`    -> endereço externo digitado por quem cadastrou o material.
+--
+-- Por que TEXT + CHECK e não um enum do Postgres:
+-- o ganho de tipo do enum já é coberto pela união `'arquivo' | 'link'` declarada no
+-- TypeScript, que é o tipo que os pontos de leitura realmente consomem. Em troca, o
+-- enum é caro de mudar (remover valor exige recriar o tipo e reescrever a coluna;
+-- valor recém-adicionado não pode ser usado na mesma transação, e `db push` roda um
+-- arquivo por transação). Com CHECK, alterar o vocabulário é DROP + ADD CONSTRAINT
+-- num arquivo só. O nome explícito da constraint é o que aparece na mensagem de erro
+-- e o que uma migration futura precisa citar.
+--
+-- Por que o DEFAULT 'link' é obrigatório, e não conveniência:
+-- o código em produção agora insere sem a coluna (`aula_id, nome, url, ordem`).
+-- Uma coluna NOT NULL sem default faria "Anexar arquivo" e "Anexar link" falharem
+-- no instante em que esta migration subisse, até o deploy do código novo. Com o
+-- default, os dois continuam funcionando exatamente como hoje. O default fica
+-- permanente: depois que os inserts passarem `origem` explicitamente ele deixa de
+-- ser exercido, e mantê-lo custa nada enquanto remove a chance de uma janela de
+-- deploy quebrar inserção de novo.
+--
+-- Por que 'link' é o valor certo para as linhas já existentes:
+-- em produção a pasta de materiais do bucket `conteudo` está vazia — toda linha
+-- gravada até aqui é link externo. O caso excepcional (linha cujo `url` contém o
+-- prefixo público, possível em ambiente de teste) é remarcado pela migração de
+-- dados posterior, que detecta exatamente por esse prefixo.
+--
+-- Por que a RLS `aula_materiais_select` NÃO é tocada de propósito:
+-- policy de RLS filtra LINHA, não coluna — a coluna nova entra automaticamente no
+-- que a policy já libera. E `GRANT SELECT ON public.aula_materiais TO authenticated`
+-- é grant de tabela, que cobre colunas adicionadas depois. Nada a regravar aqui.
+ALTER TABLE public.aula_materiais
+  ADD COLUMN origem TEXT NOT NULL DEFAULT 'link'
+  CONSTRAINT aula_materiais_origem_valida CHECK (origem IN ('arquivo', 'link'));
