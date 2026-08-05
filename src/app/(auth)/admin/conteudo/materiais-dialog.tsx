@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { FileText, Link2, Trash2 } from 'lucide-react'
+import { Link2 } from 'lucide-react'
 import {
   adicionarMaterialArquivo,
   adicionarMaterialLink,
@@ -9,6 +9,7 @@ import {
   type EstadoConteudo,
 } from './actions'
 import type { AulaLinha } from './dados'
+import { ItemMaterialDialog } from './item-material-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -64,26 +65,17 @@ export function MateriaisDialog({
             ) : (
               <ul className="space-y-2">
                 {aula.materiais.map((material) => (
-                  <li key={material.id} className="flex items-center justify-between gap-2 text-sm">
-                    <a
-                      href={material.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 underline-offset-4 hover:underline"
-                    >
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      {material.nome}
-                    </a>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remover ${material.nome}`}
-                      disabled={removendo}
-                      onClick={() => iniciarRemocao(() => removerMaterial(material.id))}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </li>
+                  <ItemMaterialDialog
+                    key={material.id}
+                    // TODO(issue 10/12): a origem vem fixa em 'link' porque a coluna
+                    // ainda não existe e a pasta de materiais do bucket está vazia —
+                    // toda linha de hoje é link externo. A issue 10 traz `origem` em
+                    // `MaterialLinha` e a constante some. Nunca inspecionar o texto
+                    // de `url` para adivinhar a origem.
+                    material={{ id: material.id, nome: material.nome, origem: 'link', url: material.url }}
+                    removendo={removendo}
+                    onRemover={() => iniciarRemocao(() => removerMaterial(material.id))}
+                  />
                 ))}
               </ul>
             )}
