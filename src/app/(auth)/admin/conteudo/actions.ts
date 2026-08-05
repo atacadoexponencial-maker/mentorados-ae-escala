@@ -428,15 +428,7 @@ export async function excluirAula(aulaId: string): Promise<void> {
   // BUCKET_MATERIAIS. Os retornos de `list`/`remove` são descartados de
   // propósito — a ação é `void` e a aula já saiu do banco.
 
-  // Transitório até a issue 13 migrar os arquivos antigos: material gravado
-  // antes desta feature ficou em `conteudo/materiais/<aulaId>/`, num bucket
-  // PÚBLICO. Como o DELETE da aula já derrubou as linhas por cascade, ninguém
-  // mais conseguiria achar esse objeto — o órfão seria permanente e baixável.
-  // Some junto com o ramo legado de `removerMaterial`.
-  const { data: legadoMateriais } = await admin.storage
-    .from('conteudo')
-    .list(`materiais/${aulaId}`)
-  const caminhos = (legadoMateriais ?? []).map((a) => `materiais/${aulaId}/${a.name}`)
+  const caminhos: string[] = []
   for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
     caminhos.push(`capas/${aulaId}.${ext}`)
   }
@@ -601,17 +593,8 @@ export async function removerMaterial(materialId: string): Promise<void> {
   // interno completo dentro do bucket privado e vai cru para o Storage.
   // O retorno é descartado de propósito — remoção de material não devolve erro
   // para a usuária, e a linha já saiu do banco.
-  const PREFIXO_PUBLICO_LEGADO = '/storage/v1/object/public/conteudo/'
   if (material.origem === 'arquivo') {
     await admin.storage.from(BUCKET_MATERIAIS).remove([material.url])
-  } else if (material.url.includes(PREFIXO_PUBLICO_LEGADO)) {
-    // Transitório até a issue 13 migrar as linhas antigas: linha gravada antes
-    // desta feature ficou com `origem = 'link'` pelo DEFAULT, mas aponta para um
-    // objeto público em `conteudo`. Sem este ramo, apagar a linha deixaria o
-    // arquivo público e órfão para sempre. Aqui `url` é URL de verdade, então o
-    // `decodeURIComponent` é necessário — e some junto com o ramo.
-    const caminho = decodeURIComponent(material.url.split(PREFIXO_PUBLICO_LEGADO)[1] ?? '')
-    if (caminho) await admin.storage.from('conteudo').remove([caminho])
   }
 
   revalidarConteudo()
