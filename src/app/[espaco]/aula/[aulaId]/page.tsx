@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Play } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Play } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
@@ -12,7 +12,7 @@ import { FaixaPreview } from '@/components/shared/faixa-preview'
 import { PandaPlayer } from '@/components/shared/panda-player'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MateriaisAula } from './materiais-aula'
 
 export default async function AulaPage({
   params,
@@ -119,30 +119,17 @@ export default async function AulaPage({
           {aula.descricao && <p className="text-sm leading-relaxed">{aula.descricao}</p>}
         </div>
 
-        {(materiais ?? []).length > 0 && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="text-base">Materiais da aula</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {(materiais ?? []).map((material) => (
-                  <li key={material.id}>
-                    <a
-                      href={material.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 text-sm underline-offset-4 hover:underline"
-                    >
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      {material.nome}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
+        {/* A coluna de origem só chega na issue 04: hoje toda linha de aula_materiais
+            é link externo (a pasta materiais/ do bucket está vazia em produção), então
+            `origem` é fixo em 'link' — sem inspecionar o texto de `url`. */}
+        <MateriaisAula
+          materiais={(materiais ?? []).map((material) => ({
+            id: material.id,
+            nome: material.nome,
+            origem: 'link' as const,
+            url: material.url,
+          }))}
+        />
 
         <div className="mt-8 flex items-center justify-between gap-4">
           {anterior ? (
