@@ -67,12 +67,7 @@ export function MateriaisDialog({
                 {aula.materiais.map((material) => (
                   <ItemMaterialDialog
                     key={material.id}
-                    // TODO(issue 10/12): a origem vem fixa em 'link' porque a coluna
-                    // ainda não existe e a pasta de materiais do bucket está vazia —
-                    // toda linha de hoje é link externo. A issue 10 traz `origem` em
-                    // `MaterialLinha` e a constante some. Nunca inspecionar o texto
-                    // de `url` para adivinhar a origem.
-                    material={{ id: material.id, nome: material.nome, origem: 'link', url: material.url }}
+                    material={material}
                     removendo={removendo}
                     onRemover={() => iniciarRemocao(() => removerMaterial(material.id))}
                   />

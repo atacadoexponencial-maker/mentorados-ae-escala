@@ -96,3 +96,45 @@ export function chaveDeArquivo(nome: string): string {
 export function podeAssinarMaterial(linha: { origem: string; url: string | null }): boolean {
   return linha.origem === 'arquivo' && (linha.url ?? '').trim().length > 0
 }
+
+// O que um material vira quando atravessa a fronteira servidor → navegador.
+//
+// A união é discriminada por `origem` e o ramo `'arquivo'` **não tem** `url`:
+// a `url` de uma linha de arquivo é o caminho interno dentro do bucket privado
+// (`<aulaId>/<timestamp>-Guia.pdf`) e esse caminho não tem nenhuma serventia no
+// cliente — quem precisa dele é o emissor de link temporário, que relê a linha
+// pelo id no servidor (`emitir-link.ts`). Mandá-lo no payload só publicaria a
+// organização interna do Storage no HTML. O ramo `'link'` continua carregando a
+// `url` porque link externo é âncora direta e nunca passa pelo servidor.
+export type MaterialCliente =
+  | { id: string; nome: string; origem: 'arquivo' }
+  | { id: string; nome: string; origem: 'link'; url: string }
+
+// Converte a linha do banco (onde `origem` é `text`, portanto `string` para o
+// TypeScript) na forma que o cliente recebe.
+//
+// POR QUE O TESTE POSITIVO É EM `'link'` e não em `'arquivo'`: a função falha
+// para o lado do arquivo. Um valor de `origem` fora do vocabulário — impossível
+// hoje pela constraint `aula_materiais_origem_valida`, possível amanhã se o
+// vocabulário crescer — cai no ramo sem `url` e nada vaza. O oposto (testar
+// `'arquivo'` e mandar o resto para `'link'`) publicaria o caminho de bucket de
+// uma linha corrompida direto no HTML.
+//
+// Isso é o inverso literal de `podeAssinarMaterial`, logo acima, que testa
+// `origem === 'arquivo'`. A inversão é DELIBERADA e as duas fecham a mesma
+// porta: lá o positivo é "assinar" (só arquivo assina); aqui o positivo é
+// "publicar a url" (só link publica). As duas recusam por omissão.
+//
+// Nunca inspecionar o texto de `url` para adivinhar a origem: a coluna `origem`
+// é a única fonte da verdade.
+export function materialParaCliente(linha: {
+  id: string
+  nome: string
+  url: string
+  origem: string
+}): MaterialCliente {
+  if (linha.origem === 'link') {
+    return { id: linha.id, nome: linha.nome, origem: 'link', url: linha.url }
+  }
+  return { id: linha.id, nome: linha.nome, origem: 'arquivo' }
+}

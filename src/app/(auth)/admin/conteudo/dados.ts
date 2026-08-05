@@ -2,9 +2,12 @@
 // espacoId null = base (admin); preenchido = conteúdo do mentorado.
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { resolverCapa } from '@/lib/capas'
+import { materialParaCliente, type MaterialCliente } from '@/lib/materiais/regras'
 import { filtrarEscopo } from './escopo'
 
-export type MaterialLinha = { id: string; nome: string; url: string }
+// Alias: a forma do material no cliente é decidida em `@/lib/materiais/regras`
+// (neutro de ambiente e testável). O nome antigo fica para não mexer em consumidor.
+export type MaterialLinha = MaterialCliente
 
 export type AulaLinha = {
   id: string
@@ -43,13 +46,13 @@ export async function listarConteudo(espacoId: string | null): Promise<ModuloLin
         ),
       espacoId
     ).order('ordem'),
-    admin.from('aula_materiais').select('id, aula_id, nome, url').order('ordem'),
+    admin.from('aula_materiais').select('id, aula_id, nome, url, origem').order('ordem'),
   ])
 
   const materiaisPorAula = new Map<string, MaterialLinha[]>()
   for (const m of materiais ?? []) {
     const lista = materiaisPorAula.get(m.aula_id) ?? []
-    lista.push({ id: m.id, nome: m.nome, url: m.url })
+    lista.push(materialParaCliente(m))
     materiaisPorAula.set(m.aula_id, lista)
   }
 
