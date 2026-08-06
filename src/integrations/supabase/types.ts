@@ -199,6 +199,7 @@ export type Database = {
           aula_id: string
           nome: string
           url: string
+          origem: string
           ordem: number
           created_at: string
         }
@@ -207,6 +208,7 @@ export type Database = {
           aula_id: string
           nome: string
           url: string
+          origem?: string
           ordem?: number
           created_at?: string
         }
@@ -215,6 +217,7 @@ export type Database = {
           aula_id?: string
           nome?: string
           url?: string
+          origem?: string
           ordem?: number
           created_at?: string
         }

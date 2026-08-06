@@ -5,6 +5,7 @@ import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
 import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES } from '@/lib/upload'
+import { BUCKET_MATERIAIS, chaveDeArquivo } from '@/lib/materiais/regras'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
 
@@ -422,11 +423,12 @@ export async function excluirAula(aulaId: string): Promise<void> {
 
   await admin.from('aulas').delete().eq('id', aulaId)
 
-  // Limpa arquivos do storage (capa + materiais enviados)
-  const { data: arquivosMateriais } = await admin.storage
-    .from('conteudo')
-    .list(`materiais/${aulaId}`)
-  const caminhos = (arquivosMateriais ?? []).map((a) => `materiais/${aulaId}/${a.name}`)
+  // Limpa arquivos do storage. São DOIS destinos: as capas continuam no bucket
+  // público `conteudo` e os materiais agora moram no bucket privado
+  // BUCKET_MATERIAIS. Os retornos de `list`/`remove` são descartados de
+  // propósito — a ação é `void` e a aula já saiu do banco.
+
+  const caminhos: string[] = []
   for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
     caminhos.push(`capas/${aulaId}.${ext}`)
   }
@@ -436,6 +438,22 @@ export async function excluirAula(aulaId: string): Promise<void> {
     .list('capas', { search: `${aulaId}-` })
   for (const a of capasMarca ?? []) caminhos.push(`capas/${a.name}`)
   if (caminhos.length) await admin.storage.from('conteudo').remove(caminhos)
+
+  // Materiais no bucket privado. O prefixo é só `<aulaId>` — `materiais/` virou
+  // o nome do bucket. A listagem é paginada porque `list()` trunca em 100 por
+  // padrão (e uma aula pode ter mais que isso); a ordenação default (`name`
+  // asc) é estável, e o `remove` só roda depois que a listagem terminou, então
+  // paginar por `offset` é seguro.
+  const LIMITE_PAGINA = 100
+  const materiais: string[] = []
+  for (let offset = 0; ; offset += LIMITE_PAGINA) {
+    const { data: pagina } = await admin.storage
+      .from(BUCKET_MATERIAIS)
+      .list(aulaId, { limit: LIMITE_PAGINA, offset })
+    for (const a of pagina ?? []) materiais.push(`${aulaId}/${a.name}`)
+    if ((pagina?.length ?? 0) < LIMITE_PAGINA) break
+  }
+  if (materiais.length) await admin.storage.from(BUCKET_MATERIAIS).remove(materiais)
 
   revalidarConteudo()
 }
@@ -480,28 +498,36 @@ export async function adicionarMaterialArquivo(
   }
 
   const admin = createAdminClient()
+  // `nome` vai íntegro para o banco (com acento — é o nome amigável do
+  // download); só a chave do Storage passa por `chaveDeArquivo`, que a força a
+  // ASCII. O bucket recusa chave acentuada com `InvalidKey`. A ordem importa:
+  // `sanitizarNomeArquivo` já trocou `/` e `\` por `_` antes, então nada aqui
+  // consegue subir de pasta. O primeiro segmento é `aulaId`, barrado por
+  // `ehUuid` acima. O prefixo `materiais/` sumiu: agora é o nome do bucket.
   const nome = sanitizarNomeArquivo(arquivo.name)
-  const caminho = `materiais/${aulaId}/${Date.now()}-${nome}`
+  const caminho = `${aulaId}/${Date.now()}-${chaveDeArquivo(nome)}`
 
   const { error: erroUpload } = await admin.storage
-    .from('conteudo')
+    .from(BUCKET_MATERIAIS)
     .upload(caminho, arquivo, { contentType: contentTypeDeMaterial(arquivo) })
   if (erroUpload) {
     return { ok: false, erro: 'Não foi possível enviar o arquivo.' }
   }
 
-  const {
-    data: { publicUrl },
-  } = admin.storage.from('conteudo').getPublicUrl(caminho)
-
+  // `url` guarda o CAMINHO INTERNO do bucket privado, não uma URL pública: quem
+  // baixa é o emissor de link assinado (`src/lib/materiais/emitir-link.ts`).
+  // `origem: 'arquivo'` é explícito de propósito — a coluna tem
+  // `DEFAULT 'link'`, e uma linha de arquivo nascida como link jamais seria
+  // assinada, ficando permanentemente indisponível.
   const { error } = await admin.from('aula_materiais').insert({
     aula_id: aulaId,
     nome,
-    url: publicUrl,
+    url: caminho,
+    origem: 'arquivo',
     ordem: await proximaOrdemMaterial(aulaId),
   })
   if (error) {
-    await admin.storage.from('conteudo').remove([caminho])
+    await admin.storage.from(BUCKET_MATERIAIS).remove([caminho])
     return { ok: false, erro: 'Não foi possível salvar o material.' }
   }
 
@@ -530,10 +556,14 @@ export async function adicionarMaterialLink(
   }
 
   const admin = createAdminClient()
+  // A `origem` vai explícita de propósito, mesmo com o `DEFAULT 'link'` da
+  // coluna: assim esta função fica simétrica a `adicionarMaterialArquivo` e não
+  // depende de uma decisão de migração para gravar o valor certo.
   const { error } = await admin.from('aula_materiais').insert({
     aula_id: aulaId,
     nome,
     url,
+    origem: 'link',
     ordem: await proximaOrdemMaterial(aulaId),
   })
   if (error) {
@@ -551,7 +581,7 @@ export async function removerMaterial(materialId: string): Promise<void> {
 
   const { data: material } = await admin
     .from('aula_materiais')
-    .select('url, aula_id')
+    .select('url, aula_id, origem')
     .eq('id', materialId)
     .maybeSingle()
   if (!material) return
@@ -559,11 +589,12 @@ export async function removerMaterial(materialId: string): Promise<void> {
 
   await admin.from('aula_materiais').delete().eq('id', materialId)
 
-  // Se era upload nosso, remove o arquivo do bucket
-  const prefixo = '/storage/v1/object/public/conteudo/'
-  if (material?.url.includes(prefixo)) {
-    const caminho = decodeURIComponent(material.url.split(prefixo)[1] ?? '')
-    if (caminho) await admin.storage.from('conteudo').remove([caminho])
+  // A origem é a única fonte de verdade: `url` de linha de arquivo é o caminho
+  // interno completo dentro do bucket privado e vai cru para o Storage.
+  // O retorno é descartado de propósito — remoção de material não devolve erro
+  // para a usuária, e a linha já saiu do banco.
+  if (material.origem === 'arquivo') {
+    await admin.storage.from(BUCKET_MATERIAIS).remove([material.url])
   }
 
   revalidarConteudo()

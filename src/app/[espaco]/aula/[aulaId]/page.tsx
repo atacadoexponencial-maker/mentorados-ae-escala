@@ -1,18 +1,19 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Play } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Play } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
 import { ehPreview } from '@/lib/preview'
 import { createClient } from '@/integrations/supabase/server'
 import { carregarCatalogo } from '@/lib/catalogo'
+import { materialParaCliente } from '@/lib/materiais/regras'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { FaixaPreview } from '@/components/shared/faixa-preview'
 import { PandaPlayer } from '@/components/shared/panda-player'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MateriaisAula } from './materiais-aula'
 
 export default async function AulaPage({
   params,
@@ -62,7 +63,7 @@ export default async function AulaPage({
 
   const { data: materiais } = await supabase
     .from('aula_materiais')
-    .select('id, nome, url')
+    .select('id, nome, url, origem')
     .eq('aula_id', aula.id)
     .order('ordem')
 
@@ -119,30 +120,7 @@ export default async function AulaPage({
           {aula.descricao && <p className="text-sm leading-relaxed">{aula.descricao}</p>}
         </div>
 
-        {(materiais ?? []).length > 0 && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="text-base">Materiais da aula</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {(materiais ?? []).map((material) => (
-                  <li key={material.id}>
-                    <a
-                      href={material.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 text-sm underline-offset-4 hover:underline"
-                    >
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      {material.nome}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
+        <MateriaisAula materiais={(materiais ?? []).map(materialParaCliente)} />
 
         <div className="mt-8 flex items-center justify-between gap-4">
           {anterior ? (
