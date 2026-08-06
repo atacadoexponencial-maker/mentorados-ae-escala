@@ -17,7 +17,10 @@ Para rodar um único arquivo de teste:
 npx vitest run src/test/example.test.ts
 ```
 
-E2E usa Playwright (`playwright.config.ts`).
+Não há suíte E2E: `@playwright/test` está instalado, mas não existem `playwright.config.ts`,
+pasta de specs nem script de E2E. A verificação de fluxo em navegador é feita manualmente contra
+`npm run dev`, com o MCP de browser. Testes automatizados são Vitest, em `src/test/` — os de nome
+`*.integration.test.ts` falam com o Supabase real e se autopulam quando não há env.
 
 ## Architecture
 
