@@ -127,8 +127,9 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
             <div className="space-y-2">
               <Label htmlFor="banner">Banner do topo</Label>
               <p className="text-xs text-muted-foreground">
-                PNG, JPG ou WEBP até 5 MB. Use 2400×960 px — outras proporções são cortadas nas
-                laterais ou em cima e embaixo. Sem banner, entra um degradê com as suas cores.
+                PNG, JPG ou WEBP até 5 MB. Use 2400×640 px. O banner ocupa a largura toda da tela,
+                então em telas mais largas ou mais estreitas ele é aparado nas bordas — deixe logo e
+                texto no centro. Sem banner, entra um degradê com as suas cores.
               </p>
               {bannerPrevia ? (
                 <div className="overflow-hidden rounded-lg border border-border">
@@ -136,11 +137,11 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
                   <img
                     src={bannerPrevia}
                     alt="Banner"
-                    className="aspect-[2400/960] w-full object-cover"
+                    className="aspect-[2400/640] w-full object-cover"
                   />
                 </div>
               ) : (
-                <div className="flex aspect-[2400/960] w-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                <div className="flex aspect-[2400/640] w-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
                   Sem banner (usa o degradê das cores)
                 </div>
               )}

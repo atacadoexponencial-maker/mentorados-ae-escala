@@ -66,32 +66,30 @@ export default async function CatalogoPage({
       {preview && <FaixaPreview />}
       <EspacoHeader espaco={dados} emailUsuario={vinculo.email ?? undefined} />
 
-      <div className="mx-auto w-full max-w-7xl px-4 pt-6">
-        {dados.banner_url ? (
-          <div className="overflow-hidden rounded-lg border border-border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={dados.banner_url}
-              alt={dados.nome_curso}
-              className="aspect-[2400/960] w-full object-cover sm:max-h-[412px]"
-            />
+      {dados.banner_url ? (
+        <div className="w-full overflow-hidden border-b border-border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={dados.banner_url}
+            alt={dados.nome_curso}
+            className="h-[180px] w-full object-cover object-center sm:h-[412px]"
+          />
+        </div>
+      ) : (
+        <div
+          className="flex h-[180px] w-full items-center overflow-hidden border-b border-border sm:h-[412px]"
+          style={{
+            background: `linear-gradient(120deg, ${dados.cor_primaria ?? '#171717'}, ${
+              dados.cor_destaque ?? '#525252'
+            })`,
+          }}
+        >
+          <div className="mx-auto w-full max-w-7xl px-4">
+            <h1 className="text-2xl font-black text-white sm:text-4xl">{dados.nome_curso}</h1>
+            <p className="mt-1 text-sm text-white/80">Treinamento oficial para revendedoras</p>
           </div>
-        ) : (
-          <div
-            className="flex aspect-[2400/960] w-full items-center overflow-hidden rounded-lg border border-border px-8 sm:max-h-[412px]"
-            style={{
-              background: `linear-gradient(120deg, ${dados.cor_primaria ?? '#171717'}, ${
-                dados.cor_destaque ?? '#525252'
-              })`,
-            }}
-          >
-            <div>
-              <h1 className="text-2xl font-black text-white sm:text-4xl">{dados.nome_curso}</h1>
-              <p className="mt-1 text-sm text-white/80">Treinamento oficial para revendedoras</p>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10">
         {modulosComAulas.length === 0 ? (
