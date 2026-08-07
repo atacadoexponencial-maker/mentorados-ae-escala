@@ -7,6 +7,7 @@ import { ehPreview } from '@/lib/preview'
 import { formatarDuracao } from '@/lib/mock-data'
 import { createClient } from '@/integrations/supabase/server'
 import { carregarCatalogo } from '@/lib/catalogo'
+import { CapaAula } from '@/components/shared/capa-aula'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { FaixaPreview } from '@/components/shared/faixa-preview'
 import { Button } from '@/components/ui/button'
@@ -61,6 +62,16 @@ export default async function CatalogoPage({
 
   const modulosComAulas = modulosComTodasAulas.filter((m) => m.aulas.length > 0)
 
+  // O número mostrado é a posição da aula dentro do módulo na tela, a mesma
+  // contagem usada na fileira - assim os dois lugares nunca discordam.
+  const posicaoEmAndamento = aulaEmAndamento
+    ? modulosComAulas
+        .find((m) => m.id === aulaEmAndamento.moduloId)
+        ?.aulas.findIndex((a) => a.id === aulaEmAndamento.id)
+    : undefined
+  const numeroEmAndamento =
+    posicaoEmAndamento === undefined || posicaoEmAndamento < 0 ? 1 : posicaoEmAndamento + 1
+
   return (
     <div className="flex min-h-screen flex-col">
       {preview && <FaixaPreview />}
@@ -104,17 +115,15 @@ export default async function CatalogoPage({
                   Continuar assistindo
                 </h2>
                 <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card p-4">
-                  <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-2xl font-black text-muted-foreground/40">
-                    {aulaEmAndamento.capaUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={aulaEmAndamento.capaUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      aulaEmAndamento.titulo.charAt(0)
-                    )}
+                  <div className="flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
+                    <CapaAula
+                      capaUrl={aulaEmAndamento.capaUrl}
+                      titulo={aulaEmAndamento.titulo}
+                      numero={numeroEmAndamento}
+                      corPrimaria={dados.cor_primaria}
+                      corDestaque={dados.cor_destaque}
+                      variante="faixa"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-medium">{aulaEmAndamento.titulo}</h3>
@@ -146,25 +155,21 @@ export default async function CatalogoPage({
                     </span>
                   </div>
                   <div className="row-scroll pb-2">
-                    {modulo.aulas.map((aula) => (
+                    {modulo.aulas.map((aula, indice) => (
                       <Link
                         key={aula.id}
                         href={`/${dados.slug}/aula/${aula.id}`}
                         className="card-tilt block w-[180px] sm:w-[200px]"
                       >
                         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-border bg-muted">
-                          {aula.capaUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={aula.capaUrl}
-                              alt={aula.titulo}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-4xl font-black text-muted-foreground/40">
-                              {aula.titulo.charAt(0)}
-                            </div>
-                          )}
+                          <CapaAula
+                            capaUrl={aula.capaUrl}
+                            titulo={aula.titulo}
+                            numero={indice + 1}
+                            corPrimaria={dados.cor_primaria}
+                            corDestaque={dados.cor_destaque}
+                            variante="card"
+                          />
                           {concluidas.has(aula.id) && (
                             <span className="absolute right-2 top-2 rounded-full bg-background/90 p-1">
                               <CheckCircle2 className="h-5 w-5 text-primary" />
