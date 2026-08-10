@@ -4,6 +4,7 @@ import { Store, User } from 'lucide-react'
 import { createClient } from '@/integrations/supabase/server'
 import { Button } from '@/components/ui/button'
 import { BotaoSair } from '@/components/shared/botao-sair'
+import { TourPainel } from '@/components/shared/onboarding/tour-painel'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,9 +26,13 @@ export default async function MentorLayout({ children }: { children: React.React
 
   const { data: espaco } = await supabase
     .from('espacos')
-    .select('slug')
+    .select('slug, onboarding_visto_em')
     .eq('mentorado_user_id', user.id)
     .maybeSingle()
+
+  // Quem decide se o tour existe é o servidor, na carga da página: assim nada
+  // pisca na tela de quem já viu.
+  const mostrarTour = Boolean(espaco && !espaco.onboarding_visto_em)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -40,13 +45,25 @@ export default async function MentorLayout({ children }: { children: React.React
             <Store className="h-4 w-4" />
           </Link>
           <nav className="ml-4 flex items-center gap-4 text-sm">
-            <Link href="/mentor/personalizacao" className="text-muted-foreground hover:text-foreground">
+            <Link
+              href="/mentor/personalizacao"
+              data-tour="personalizacao"
+              className="text-muted-foreground hover:text-foreground"
+            >
               Personalização
             </Link>
-            <Link href="/mentor/conteudo" className="text-muted-foreground hover:text-foreground">
+            <Link
+              href="/mentor/conteudo"
+              data-tour="conteudo"
+              className="text-muted-foreground hover:text-foreground"
+            >
               Conteúdo
             </Link>
-            <Link href="/mentor/revendedores" className="text-muted-foreground hover:text-foreground">
+            <Link
+              href="/mentor/revendedores"
+              data-tour="revendedores"
+              className="text-muted-foreground hover:text-foreground"
+            >
               Revendedores
             </Link>
             <Link href="/mentor/dashboard" className="text-muted-foreground hover:text-foreground">
@@ -57,6 +74,7 @@ export default async function MentorLayout({ children }: { children: React.React
                 href={`/${espaco.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-tour="area-membros"
                 className="text-muted-foreground hover:text-foreground"
               >
                 Ver área de membros
@@ -80,6 +98,7 @@ export default async function MentorLayout({ children }: { children: React.React
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">{children}</main>
+      {mostrarTour && <TourPainel />}
     </div>
   )
 }

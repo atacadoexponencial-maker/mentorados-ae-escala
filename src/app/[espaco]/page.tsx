@@ -10,6 +10,7 @@ import { carregarCatalogo } from '@/lib/catalogo'
 import { CapaAula } from '@/components/shared/capa-aula'
 import { EspacoHeader } from '@/components/shared/espaco-header'
 import { FaixaPreview } from '@/components/shared/faixa-preview'
+import { CartaoBoasVindas } from '@/components/shared/onboarding/cartao-boas-vindas'
 import { Button } from '@/components/ui/button'
 
 export default async function CatalogoPage({
@@ -72,8 +73,21 @@ export default async function CatalogoPage({
   const numeroEmAndamento =
     posicaoEmAndamento === undefined || posicaoEmAndamento < 0 ? 1 : posicaoEmAndamento + 1
 
+  // Só a revendedora dona da conta vê as boas-vindas, e só enquanto a marca de
+  // visto estiver vazia. Mentorada e admin visitando o espaço não são o público.
+  const mostrarBoasVindas = Boolean(vinculo.revendedor && !vinculo.revendedor.onboardingVistoEm)
+  const primeiraAula = modulosComAulas[0]?.aulas[0]
+
   return (
     <div className="flex min-h-screen flex-col">
+      {mostrarBoasVindas && (
+        <CartaoBoasVindas
+          nomeCurso={dados.nome_curso}
+          logoUrl={dados.logo_url}
+          corPrimaria={dados.cor_primaria}
+          primeiraAulaHref={primeiraAula ? `/${dados.slug}/aula/${primeiraAula.id}` : null}
+        />
+      )}
       {preview && <FaixaPreview />}
       <EspacoHeader espaco={dados} emailUsuario={vinculo.email ?? undefined} />
 
