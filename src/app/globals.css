@@ -70,7 +70,12 @@
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.24 0.005 30);
-  --input: oklch(0.24 0.005 30);
+  /* Mais claro que --border de propósito: o tema escuro mora no :root (sem a
+     classe `dark`), então o `dark:bg-input/30` que o shadcn usa para preencher
+     o campo no escuro nunca entra. Sem fundo, o contorno é a única coisa que
+     diferencia um campo do card — em 0.24 sobre --card 0.18 ele sumia, e o
+     campo não parecia editável. */
+  --input: oklch(0.36 0.005 30);
   --ring: oklch(0.68 0 0);
   --chart-1: oklch(0.8 0 0);
   --chart-2: oklch(0.6 0 0);
