@@ -13,6 +13,44 @@ import { LIMITES, erroDeTamanho } from '@/lib/upload'
 
 const estadoInicial: EstadoPersonalizacao = { ok: false, erro: null }
 
+// Um <input type="color"> solto lê como amostra de cor, não como controle: nada
+// nele diz que abre um seletor. Aqui a linha inteira é rótulo do campo, então
+// clicar em qualquer ponto dela abre o seletor, e o "Trocar" torna isso visível.
+function CampoCor({
+  id,
+  name,
+  rotulo,
+  valor,
+  aoMudar,
+}: {
+  id: string
+  name: string
+  rotulo: string
+  valor: string
+  aoMudar: (valor: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{rotulo}</Label>
+      <label
+        htmlFor={id}
+        className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-input px-2 transition-colors hover:bg-accent"
+      >
+        <input
+          id={id}
+          name={name}
+          type="color"
+          value={valor}
+          onChange={(e) => aoMudar(e.target.value)}
+          className="h-6 w-8 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+        />
+        <span className="text-sm tabular-nums">{valor}</span>
+        <span className="ml-auto text-xs text-muted-foreground">Trocar</span>
+      </label>
+    </div>
+  )
+}
+
 export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espacoId?: string }) {
   const [logoPrevia, setLogoPrevia] = useState<string | null>(espaco.logo_url)
   const [removerLogo, setRemoverLogo] = useState(false)
@@ -80,6 +118,44 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
             <input type="hidden" name="removerLogo" value={removerLogo ? 'sim' : 'nao'} />
             <input type="hidden" name="removerBanner" value={removerBanner ? 'sim' : 'nao'} />
             {espacoId && <input type="hidden" name="espacoId" value={espacoId} />}
+
+            {/* Nome e cores vêm antes dos uploads: são os campos mais simples de
+                mexer, e enterrados abaixo de dois blocos de imagem com parágrafo
+                de instrução eles nem apareciam na primeira tela. */}
+            <div className="space-y-2">
+              <Label htmlFor="nome-curso">Nome do curso</Label>
+              <Input
+                id="nome-curso"
+                name="nomeCurso"
+                value={nomeCurso}
+                onChange={(e) => setNomeCurso(e.target.value)}
+                placeholder="Ex.: Academia João Atacados"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Aparece no topo da área de membros, ao lado da logo.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <CampoCor
+                id="cor-primaria"
+                name="corPrimaria"
+                rotulo="Cor primária"
+                valor={corPrimaria}
+                aoMudar={setCorPrimaria}
+              />
+              <CampoCor
+                id="cor-destaque"
+                name="corDestaque"
+                rotulo="Cor de destaque"
+                valor={corDestaque}
+                aoMudar={setCorDestaque}
+              />
+            </div>
+
+            <Separator />
+
             <div className="space-y-2">
               <Label htmlFor="logo">Logo</Label>
               <p className="text-xs text-muted-foreground">
@@ -170,49 +246,6 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
                   className="hidden"
                   onChange={aoEscolherBanner}
                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nome-curso">Nome do curso</Label>
-              <Input
-                id="nome-curso"
-                name="nomeCurso"
-                value={nomeCurso}
-                onChange={(e) => setNomeCurso(e.target.value)}
-                placeholder="Ex.: Academia João Atacados"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cor-primaria">Cor primária</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="cor-primaria"
-                    name="corPrimaria"
-                    type="color"
-                    value={corPrimaria}
-                    onChange={(e) => setCorPrimaria(e.target.value)}
-                    className="h-9 w-12 cursor-pointer rounded border border-border bg-transparent p-1"
-                  />
-                  <span className="text-sm tabular-nums text-muted-foreground">{corPrimaria}</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cor-destaque">Cor de destaque</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="cor-destaque"
-                    name="corDestaque"
-                    type="color"
-                    value={corDestaque}
-                    onChange={(e) => setCorDestaque(e.target.value)}
-                    className="h-9 w-12 cursor-pointer rounded border border-border bg-transparent p-1"
-                  />
-                  <span className="text-sm tabular-nums text-muted-foreground">{corDestaque}</span>
-                </div>
               </div>
             </div>
 
