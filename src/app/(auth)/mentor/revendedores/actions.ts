@@ -5,7 +5,13 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/integrations/supabase/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
 
-export type EstadoRevendedora = { ok: boolean; erro: string | null; aviso?: string | null }
+export type EstadoRevendedora = {
+  ok: boolean
+  erro: string | null
+  aviso?: string | null
+  // Id da revendedora recém-criada, para oferecer o link de convite na hora.
+  revendedoraId?: string | null
+}
 
 // Arquivo 'use server' só exporta funções async — a constante vive aqui sem export
 // (espelhada em limite.ts para uso na interface)
@@ -40,7 +46,7 @@ export async function exigirMentorado(): Promise<{
 }
 
 type ResultadoCriacao =
-  | { ok: true; aviso: string | null }
+  | { ok: true; aviso: string | null; revendedoraId: string | null }
   | { ok: false; erro: string }
 
 // Núcleo compartilhado entre cadastro individual e importação em massa.
@@ -87,7 +93,8 @@ async function criarRevendedora(
       email_confirm: false,
     })
     usuarioId = criado.user?.id ?? null
-    aviso = 'Cadastrada, mas o e-mail de convite não pôde ser enviado agora (limite por hora). Use "Reenviar convite" mais tarde.'
+    aviso =
+      'Cadastrada, mas o e-mail de convite não pôde ser enviado agora (limite por hora). Copie o link abaixo e mande para ela — ou use "Reenviar convite" mais tarde.'
   } else if (erroConvite?.message.toLowerCase().includes('already')) {
     return { ok: false, erro: 'Este e-mail já está em uso em outro espaço' }
   }
@@ -98,22 +105,26 @@ async function criarRevendedora(
   const { error: erroPapel } = await admin
     .from('user_roles')
     .insert({ user_id: usuarioId, role: 'revendedor' })
-  const { error: erroLinha } = erroPapel
-    ? { error: erroPapel }
-    : await admin.from('revendedores').insert({
-        user_id: usuarioId,
-        espaco_id: contexto.espacoId,
-        nome: dados.nome,
-        email: dados.email,
-        whatsapp: dados.whatsapp,
-        status: 'convite-pendente',
-      })
+  const { data: linha, error: erroLinha } = erroPapel
+    ? { data: null, error: erroPapel }
+    : await admin
+        .from('revendedores')
+        .insert({
+          user_id: usuarioId,
+          espaco_id: contexto.espacoId,
+          nome: dados.nome,
+          email: dados.email,
+          whatsapp: dados.whatsapp,
+          status: 'convite-pendente',
+        })
+        .select('id')
+        .single()
   if (erroPapel || erroLinha) {
     await admin.auth.admin.deleteUser(usuarioId)
     return { ok: false, erro: 'Não foi possível concluir o cadastro. Tente novamente.' }
   }
 
-  return { ok: true, aviso }
+  return { ok: true, aviso, revendedoraId: linha?.id ?? null }
 }
 
 export async function cadastrarRevendedora(
@@ -139,7 +150,12 @@ export async function cadastrarRevendedora(
   if (!resultado.ok) return { ok: false, erro: resultado.erro }
 
   revalidatePath('/mentor/revendedores')
-  return { ok: true, erro: null, aviso: resultado.aviso }
+  return {
+    ok: true,
+    erro: null,
+    aviso: resultado.aviso,
+    revendedoraId: resultado.revendedoraId,
+  }
 }
 
 // Retorna a revendedora só se pertencer ao espaço do mentorado logado.
@@ -154,6 +170,52 @@ async function revendedoraDoEspaco(revendedoraId: string) {
     .eq('espaco_id', contexto.espacoId)
     .maybeSingle()
   return data ? { revendedora: data, contexto } : null
+}
+
+export type ResultadoLinkConvite = { ok: true; link: string } | { ok: false; erro: string }
+
+// Devolve o mesmo acesso que vai dentro do e-mail de convite, em texto, para a
+// mentorada mandar pelo canal que quiser. O link é montado sobre /auth/confirm,
+// a rota que o projeto já usa para consumir token de e-mail — assim o caminho
+// copiado e o caminho clicado no e-mail terminam no mesmo lugar.
+//
+// A interface avisa que gerar um link novo derruba o anterior. Isso vem do
+// comportamento do GoTrue, que guarda um token por usuário — não foi verificado
+// contra este projeto. O aviso é conservador de propósito: se por acaso os dois
+// continuarem valendo, ninguém fica sem acesso; o contrário seria pior.
+export async function gerarLinkConvite(revendedoraId: string): Promise<ResultadoLinkConvite> {
+  const alvo = await revendedoraDoEspaco(revendedoraId)
+  if (!alvo) return { ok: false, erro: 'Acesso negado' }
+  if (alvo.revendedora.status !== 'convite-pendente') {
+    return {
+      ok: false,
+      erro: 'Esta revendedora já fez o primeiro acesso — ela entra pela tela de login.',
+    }
+  }
+
+  const cabecalhos = await headers()
+  const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
+  const destino = `/${alvo.contexto.slug}/primeiro-acesso`
+
+  const admin = createAdminClient()
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: 'magiclink',
+    email: alvo.revendedora.email,
+    options: { redirectTo: `${origem}${destino}` },
+  })
+
+  const token = data?.properties?.hashed_token
+  if (error || !token) {
+    console.error('Geração de link de convite falhou:', error?.message)
+    return { ok: false, erro: 'Não foi possível gerar o link agora. Tente de novo em instantes.' }
+  }
+
+  const parametros = new URLSearchParams({
+    token_hash: token,
+    type: 'magiclink',
+    next: destino,
+  })
+  return { ok: true, link: `${origem}/auth/confirm?${parametros.toString()}` }
 }
 
 export async function desativarRevendedora(revendedoraId: string): Promise<void> {

@@ -8,6 +8,7 @@ import {
   reativarRevendedora,
   reenviarConviteRevendedora,
 } from './actions'
+import { LinkConviteDialog, type RevendedoraConvite } from './link-convite-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,6 +68,7 @@ export function RevendedorasTable({ revendedoras }: { revendedoras: RevendedoraL
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<(typeof filtros)[number]['valor']>('todas')
   const [pendente, iniciarTransicao] = useTransition()
+  const [linkDe, setLinkDe] = useState<RevendedoraConvite | null>(null)
 
   const filtradas = revendedoras.filter((r) => {
     const casaBusca =
@@ -141,13 +143,24 @@ export function RevendedorasTable({ revendedoras }: { revendedoras: RevendedoraL
                         <MoreHorizontal className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {/* Só faz sentido para quem ainda não entrou: depois do
+                            primeiro acesso ela já tem senha e usa o login. */}
                         {r.status === 'convite-pendente' && (
-                          <DropdownMenuItem
-                            disabled={pendente}
-                            onClick={() => iniciarTransicao(() => reenviarConviteRevendedora(r.id))}
-                          >
-                            Reenviar convite
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => setLinkDe({ id: r.id, nome: r.nome })}
+                            >
+                              Copiar link de convite
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={pendente}
+                              onClick={() =>
+                                iniciarTransicao(() => reenviarConviteRevendedora(r.id))
+                              }
+                            >
+                              Reenviar convite
+                            </DropdownMenuItem>
+                          </>
                         )}
                         {r.status === 'ativo' && (
                           <DropdownMenuItem
@@ -180,6 +193,14 @@ export function RevendedorasTable({ revendedoras }: { revendedoras: RevendedoraL
           </TableBody>
         </Table>
       </div>
+
+      {/* A key remonta o diálogo a cada revendedora, para o link nunca aparecer
+          com o da anterior enquanto o novo não chega. */}
+      <LinkConviteDialog
+        key={linkDe?.id ?? 'fechado'}
+        revendedora={linkDe}
+        onClose={() => setLinkDe(null)}
+      />
     </div>
   )
 }
