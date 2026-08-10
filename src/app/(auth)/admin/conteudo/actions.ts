@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
+import { podeGerenciarEspaco } from './autorizacao'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
 import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES } from '@/lib/upload'
 import { BUCKET_MATERIAIS, chaveDeArquivo } from '@/lib/materiais/regras'
@@ -188,21 +189,21 @@ export async function definirCapa(
   return { ok: true, erro: null }
 }
 
-// Só a admin troca a capa de conteúdo base, e só de aula base: aula de marca já
-// tem capa pelo caminho normal (definirCapa).
+// Troca a capa de conteúdo base dentro de uma marca, e só de aula base: aula de
+// marca já tem capa pelo caminho normal (definirCapa). A admin troca em qualquer
+// marca; a mentorada, só na dela.
 export async function salvarCapaNoEspaco(
   _estadoAnterior: EstadoConteudo,
   formData: FormData
 ): Promise<EstadoConteudo> {
   const escopo = await exigirEscopoConteudo()
-  if (!escopo?.ehAdmin) {
-    return { ok: false, erro: 'Acesso negado' }
-  }
-
   const aulaId = String(formData.get('aulaId') ?? '')
   const espacoId = String(formData.get('espacoId') ?? '')
   const arquivo = formData.get('arquivo')
   if (!ehUuid(aulaId) || !ehUuid(espacoId)) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+  if (!escopo || !podeGerenciarEspaco(escopo, espacoId)) {
     return { ok: false, erro: 'Acesso negado' }
   }
   if (!(arquivo instanceof File) || arquivo.size === 0) {
@@ -262,13 +263,12 @@ export async function removerCapaDoEspaco(
   formData: FormData
 ): Promise<EstadoConteudo> {
   const escopo = await exigirEscopoConteudo()
-  if (!escopo?.ehAdmin) {
-    return { ok: false, erro: 'Acesso negado' }
-  }
-
   const aulaId = String(formData.get('aulaId') ?? '')
   const espacoId = String(formData.get('espacoId') ?? '')
-  if (!aulaId || !espacoId) {
+  if (!ehUuid(aulaId) || !ehUuid(espacoId)) {
+    return { ok: false, erro: 'Acesso negado' }
+  }
+  if (!escopo || !podeGerenciarEspaco(escopo, espacoId)) {
     return { ok: false, erro: 'Acesso negado' }
   }
 
