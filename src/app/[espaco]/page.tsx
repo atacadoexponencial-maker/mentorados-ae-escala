@@ -83,7 +83,7 @@ export default async function CatalogoPage({
           <img
             src={dados.banner_url}
             alt={dados.nome_curso}
-            className="h-[180px] w-full object-cover object-center sm:h-[412px]"
+            className="aspect-[2400/640] w-full object-cover object-center"
           />
         </div>
       ) : (
