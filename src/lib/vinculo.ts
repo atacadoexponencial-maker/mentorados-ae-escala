@@ -6,7 +6,14 @@ export type Vinculo = {
   email: string | null
   roles: Set<'admin' | 'mentorado' | 'revendedor'>
   // Presente quando o usuário é revendedora
-  revendedor: { id: string; espacoId: string; espacoSlug: string; status: string } | null
+  revendedor: {
+    id: string
+    espacoId: string
+    espacoSlug: string
+    status: string
+    // Nulo = ainda não viu o cartão de boas-vindas.
+    onboardingVistoEm: string | null
+  } | null
 }
 
 export async function getVinculoDoUsuario(): Promise<Vinculo | null> {
@@ -20,13 +27,19 @@ export async function getVinculoDoUsuario(): Promise<Vinculo | null> {
     supabase.from('user_roles').select('role').eq('user_id', user.id),
     supabase
       .from('revendedores')
-      .select('id, espaco_id, status, espacos(slug)')
+      .select('id, espaco_id, status, onboarding_visto_em, espacos(slug)')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
 
   const rev = revendedor as
-    | { id: string; espaco_id: string; status: string; espacos: { slug: string } | null }
+    | {
+        id: string
+        espaco_id: string
+        status: string
+        onboarding_visto_em: string | null
+        espacos: { slug: string } | null
+      }
     | null
 
   return {
@@ -39,6 +52,7 @@ export async function getVinculoDoUsuario(): Promise<Vinculo | null> {
           espacoId: rev.espaco_id,
           espacoSlug: rev.espacos?.slug ?? '',
           status: rev.status,
+          onboardingVistoEm: rev.onboarding_visto_em,
         }
       : null,
   }

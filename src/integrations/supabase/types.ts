@@ -16,6 +16,7 @@ export type Database = {
           ativo: boolean
           mentorado_user_id: string | null
           panda_folder_id: string | null
+          onboarding_visto_em: string | null
           created_at: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           ativo?: boolean
           mentorado_user_id?: string | null
           panda_folder_id?: string | null
+          onboarding_visto_em?: string | null
           created_at?: string
         }
         Update: {
@@ -42,6 +44,7 @@ export type Database = {
           ativo?: boolean
           mentorado_user_id?: string | null
           panda_folder_id?: string | null
+          onboarding_visto_em?: string | null
           created_at?: string
         }
       }
@@ -95,6 +98,7 @@ export type Database = {
           whatsapp: string | null
           status: 'ativo' | 'inativo' | 'convite-pendente'
           ultimo_acesso: string | null
+          onboarding_visto_em: string | null
           created_at: string
         }
         Insert: {
@@ -106,6 +110,7 @@ export type Database = {
           whatsapp?: string | null
           status?: 'ativo' | 'inativo' | 'convite-pendente'
           ultimo_acesso?: string | null
+          onboarding_visto_em?: string | null
           created_at?: string
         }
         Update: {
@@ -117,6 +122,7 @@ export type Database = {
           whatsapp?: string | null
           status?: 'ativo' | 'inativo' | 'convite-pendente'
           ultimo_acesso?: string | null
+          onboarding_visto_em?: string | null
           created_at?: string
         }
       }
