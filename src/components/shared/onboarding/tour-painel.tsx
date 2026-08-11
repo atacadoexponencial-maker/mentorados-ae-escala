@@ -68,6 +68,10 @@ const PASSOS = [
 
 const MARGEM = 12
 const LARGURA = 340
+// Cabeçalho do painel (h-14) mais uma folga: ele é fixo e cobre o topo da tela.
+const ALTURA_CABECALHO = 68
+// Altura típica do balão, usada só para decidir de que lado ele cabe.
+const ALTURA_BALAO = 200
 
 type Retangulo = { top: number; left: number; width: number; height: number }
 
@@ -130,7 +134,18 @@ export function TourPainel() {
       if (elemento) {
         // Rolar até o elemento antes de medir: sem isto, um alvo fora da tela ou
         // debaixo do cabeçalho fixo é destacado cortado.
-        elemento.scrollIntoView({ block: 'center', behavior: 'auto' })
+        //
+        // Não dá para usar scrollIntoView({block:'center'}): ele ignora o
+        // cabeçalho fixo, e centralizar um alvo MAIS ALTO que a janela joga o
+        // topo dele para fora — foi o que cortava o card do conteúdo base.
+        const inicial = elemento.getBoundingClientRect()
+        const util = window.innerHeight - ALTURA_CABECALHO
+        const topoAbsoluto = inicial.top + window.scrollY - ALTURA_CABECALHO
+        const destino =
+          inicial.height > util
+            ? topoAbsoluto // alto demais para caber: alinha pelo topo
+            : topoAbsoluto - (util - inicial.height) / 2
+        window.scrollTo({ top: Math.max(0, destino), behavior: 'auto' })
         requestAnimationFrame(() => {
           if (parado) return
           const r = elemento.getBoundingClientRect()
@@ -203,19 +218,28 @@ export function TourPainel() {
     )
   }
 
-  const cabeAbaixo = alvo ? alvo.top + alvo.height + MARGEM + 220 < window.innerHeight : true
+  // Três posições, nesta ordem: abaixo do alvo, acima dele, ou grudado no rodapé
+  // da janela. A terceira existe para o alvo que ocupa a tela toda — sem ela o
+  // balão era espremido contra o topo e cortado.
+  const espacoAbaixo = alvo ? window.innerHeight - (alvo.top + alvo.height) - MARGEM : 0
+  const espacoAcima = alvo ? alvo.top - MARGEM - ALTURA_CABECALHO : 0
+
+  const horizontal = alvo
+    ? Math.max(
+        MARGEM,
+        Math.min(alvo.left + alvo.width / 2 - LARGURA / 2, window.innerWidth - LARGURA - MARGEM)
+      )
+    : 0
+
   const estilo: React.CSSProperties = alvo
     ? {
         position: 'fixed',
-        top: cabeAbaixo ? alvo.top + alvo.height + MARGEM : undefined,
-        bottom: cabeAbaixo ? undefined : window.innerHeight - alvo.top + MARGEM,
-        left: Math.max(
-          MARGEM,
-          Math.min(
-            alvo.left + alvo.width / 2 - LARGURA / 2,
-            window.innerWidth - LARGURA - MARGEM
-          )
-        ),
+        ...(espacoAbaixo >= ALTURA_BALAO
+          ? { top: alvo.top + alvo.height + MARGEM }
+          : espacoAcima >= ALTURA_BALAO
+            ? { bottom: window.innerHeight - alvo.top + MARGEM }
+            : { bottom: MARGEM }),
+        left: horizontal,
         width: `min(${LARGURA}px, calc(100vw - ${MARGEM * 2}px))`,
       }
     : {
