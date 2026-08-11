@@ -4,14 +4,8 @@ import { createAdminClient } from '@/integrations/supabase/admin'
 import { formatarHoras } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TabelaRanking } from './tabela-ranking'
+import { TabelaPorAula } from '@/components/shared/tabela/tabela-por-aula'
 
 const periodos = [
   { valor: '7', rotulo: '7 dias' },
@@ -24,17 +18,6 @@ function inicioDoPeriodo(periodo: string): string | null {
   if (periodo === 'tudo') return null
   const dias = Number(periodo) || 30
   return new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString()
-}
-
-function BarraConclusao({ percentual }: { percentual: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${percentual}%` }} />
-      </div>
-      <span className="w-10 text-right tabular-nums text-muted-foreground">{percentual}%</span>
-    </div>
-  )
 }
 
 export default async function DashboardGlobalPage({
@@ -160,38 +143,7 @@ export default async function DashboardGlobalPage({
           <CardTitle>Ranking de mentorados</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Marca</TableHead>
-                <TableHead className="text-right">Revendedoras ativas</TableHead>
-                <TableHead className="text-right">Tempo assistido</TableHead>
-                <TableHead className="text-right">Aulas concluídas</TableHead>
-                <TableHead className="w-28" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ranking.map((r, i) => (
-                <TableRow key={r.slug}>
-                  <TableCell className="text-muted-foreground">{i + 1}º</TableCell>
-                  <TableCell className="font-medium">{r.marca}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.ativas}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatarHoras(r.tempo)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.concluidas}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      render={<Link href={`/admin/mentorados/${r.slug}`} />}
-                    >
-                      Ver espaço
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <TabelaRanking linhas={ranking} />
         </CardContent>
       </Card>
 
@@ -200,28 +152,7 @@ export default async function DashboardGlobalPage({
           <CardTitle>Por aula</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aula</TableHead>
-                <TableHead>Módulo</TableHead>
-                <TableHead className="text-right">Assistiram</TableHead>
-                <TableHead>Conclusão média</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {porAula.map((linha) => (
-                <TableRow key={linha.id}>
-                  <TableCell className="font-medium">{linha.titulo}</TableCell>
-                  <TableCell className="text-muted-foreground">{linha.modulo}</TableCell>
-                  <TableCell className="text-right tabular-nums">{linha.assistiram}</TableCell>
-                  <TableCell>
-                    <BarraConclusao percentual={linha.percentual} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <TabelaPorAula linhas={porAula} rotuloConclusao="Conclusão média" />
         </CardContent>
       </Card>
     </div>

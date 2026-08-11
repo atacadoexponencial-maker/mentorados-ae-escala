@@ -3,17 +3,11 @@ import { redirect } from 'next/navigation'
 import { Download } from 'lucide-react'
 import { createClient } from '@/integrations/supabase/server'
 import { formatarHoras } from '@/lib/mock-data'
-import { DetalheDialog, type AulaAssistida } from './detalhe-dialog'
+import { type AulaAssistida } from './detalhe-dialog'
+import { TabelaPorRevendedora } from './tabela-por-revendedora'
+import { TabelaPorAula } from '@/components/shared/tabela/tabela-por-aula'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 
 const periodos = [
   { valor: '7', rotulo: '7 dias' },
@@ -26,26 +20,6 @@ function inicioDoPeriodo(periodo: string): string | null {
   if (periodo === 'tudo') return null
   const dias = Number(periodo) || 30
   return new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString()
-}
-
-function BarraConclusao({ percentual }: { percentual: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${percentual}%` }} />
-      </div>
-      <span className="w-10 text-right tabular-nums text-muted-foreground">{percentual}%</span>
-    </div>
-  )
-}
-
-function formatarData(iso: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
 }
 
 export default async function DashboardMentoradoPage({
@@ -181,28 +155,7 @@ export default async function DashboardMentoradoPage({
           <CardTitle>Por aula</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aula</TableHead>
-                <TableHead>Módulo</TableHead>
-                <TableHead className="text-right">Assistiram</TableHead>
-                <TableHead>Conclusão</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {porAula.map((linha) => (
-                <TableRow key={linha.id}>
-                  <TableCell className="font-medium">{linha.titulo}</TableCell>
-                  <TableCell className="text-muted-foreground">{linha.modulo}</TableCell>
-                  <TableCell className="text-right tabular-nums">{linha.assistiram}</TableCell>
-                  <TableCell>
-                    <BarraConclusao percentual={linha.percentual} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <TabelaPorAula linhas={porAula} />
         </CardContent>
       </Card>
 
@@ -212,34 +165,7 @@ export default async function DashboardMentoradoPage({
             <CardTitle>Por revendedora</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="text-right">Concluídas</TableHead>
-                  <TableHead className="text-right">Tempo</TableHead>
-                  <TableHead>Última atividade</TableHead>
-                  <TableHead className="w-28" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {porRevendedora.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.nome}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.concluidas}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatarHoras(r.tempo)}
-                    </TableCell>
-                    <TableCell className="tabular-nums text-muted-foreground">
-                      {formatarData(r.ultimaAtividade)}
-                    </TableCell>
-                    <TableCell>
-                      <DetalheDialog nome={r.nome} aulas={r.aulasAssistidas} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <TabelaPorRevendedora linhas={porRevendedora} />
           </CardContent>
         </Card>
 
