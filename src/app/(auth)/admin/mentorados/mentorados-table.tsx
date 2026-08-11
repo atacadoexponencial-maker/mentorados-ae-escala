@@ -6,6 +6,7 @@ import { MoreHorizontal, Search } from 'lucide-react'
 import { desativarMentorado, reativarMentorado, reenviarConviteMentorado } from './actions'
 import type { MentoradoLinha } from './dados'
 import { EditarMentoradoDialog } from './editar-mentorado-dialog'
+import { ExcluirMentoradoDialog } from './excluir-mentorado-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +40,7 @@ const statusVariant: Record<MentoradoLinha['status'], 'default' | 'secondary' | 
 export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }) {
   const [busca, setBusca] = useState('')
   const [editando, setEditando] = useState<MentoradoLinha | null>(null)
+  const [excluindo, setExcluindo] = useState<string | null>(null)
   const [pendente, iniciarTransicao] = useTransition()
 
   const filtrados = mentorados.filter(
@@ -126,6 +128,12 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
                         >
                           Ver dashboard
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => setExcluindo(m.id)}
+                        >
+                          Excluir
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -141,6 +149,12 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
         key={editando?.id ?? 'fechado'}
         mentorado={editando}
         onClose={() => setEditando(null)}
+      />
+
+      <ExcluirMentoradoDialog
+        key={`excluir-${excluindo ?? 'fechado'}`}
+        espacoId={excluindo}
+        onClose={() => setExcluindo(null)}
       />
     </div>
   )

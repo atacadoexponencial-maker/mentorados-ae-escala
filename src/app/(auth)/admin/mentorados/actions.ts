@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/integrations/supabase/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
+import { BUCKET_MATERIAIS } from '@/lib/materiais/regras'
 
 export type EstadoMentorado = { ok: boolean; erro: string | null }
 
@@ -161,6 +162,134 @@ export async function reenviarConviteMentorado(espacoId: string): Promise<void> 
 
   await admin.from('user_roles').insert({ user_id: novoUsuario.id, role: 'mentorado' })
   await admin.from('espacos').update({ mentorado_user_id: novoUsuario.id }).eq('id', espacoId)
+
+  revalidatePath('/admin/mentorados')
+}
+
+export type DependenciasMentorado = {
+  slug: string
+  marca: string
+  email: string | null
+  revendedoras: number
+  modulos: number
+  aulas: number
+  capas: number
+  temPandaFolder: boolean
+}
+
+// O que some junto se este mentorado for excluído. Serve para a tela mostrar o
+// tamanho do estrago antes de perguntar — exclusão aqui é irreversível e leva a
+// conta de uma pessoa real junto.
+export async function dependenciasDoMentorado(
+  espacoId: string
+): Promise<DependenciasMentorado | null> {
+  if (!(await exigirAdmin())) return null
+  const admin = createAdminClient()
+
+  const { data: espaco } = await admin
+    .from('espacos')
+    .select('id, slug, nome_curso, mentorado_user_id, panda_folder_id')
+    .eq('id', espacoId)
+    .maybeSingle()
+  if (!espaco) return null
+
+  const contar = async (tabela: 'revendedores' | 'modulos' | 'aulas' | 'aula_capas_espaco') => {
+    const { count } = await admin
+      .from(tabela)
+      .select('id', { count: 'exact', head: true })
+      .eq('espaco_id', espacoId)
+    return count ?? 0
+  }
+
+  const [revendedoras, modulos, aulas, capas] = await Promise.all([
+    contar('revendedores'),
+    contar('modulos'),
+    contar('aulas'),
+    contar('aula_capas_espaco'),
+  ])
+
+  let email: string | null = null
+  if (espaco.mentorado_user_id) {
+    const { data } = await admin.auth.admin.getUserById(espaco.mentorado_user_id)
+    email = data.user?.email ?? null
+  }
+
+  return {
+    slug: espaco.slug,
+    marca: espaco.nome_curso,
+    email,
+    revendedoras,
+    modulos,
+    aulas,
+    capas,
+    temPandaFolder: Boolean(espaco.panda_folder_id),
+  }
+}
+
+// Exclusão definitiva. O banco cascateia as linhas a partir de espacos
+// (revendedores, modulos, aulas, capas por marca, visualizações), mas duas
+// coisas ele não alcança e precisam ser feitas aqui: as contas no Auth e os
+// arquivos no Storage. A pasta no Panda Video fica — apagar vídeo é destrutivo
+// de um jeito que não cabe num efeito colateral de outra ação.
+export async function excluirMentorado(espacoId: string, confirmacao: string): Promise<void> {
+  if (!(await exigirAdmin())) return
+  const admin = createAdminClient()
+
+  const { data: espaco } = await admin
+    .from('espacos')
+    .select('id, slug, mentorado_user_id, panda_folder_id')
+    .eq('id', espacoId)
+    .maybeSingle()
+  if (!espaco) return
+
+  // A tela pede o endereço digitado. Conferir de novo aqui, no servidor, porque
+  // o cliente não é autoridade sobre nada — muito menos sobre isto.
+  if (confirmacao.trim().toLowerCase() !== espaco.slug) return
+
+  // Coletado antes de apagar: depois da exclusão não há mais como descobrir
+  // quais usuários e arquivos pertenciam a este espaço.
+  const [{ data: revendedoras }, { data: aulas }] = await Promise.all([
+    admin.from('revendedores').select('user_id').eq('espaco_id', espacoId),
+    admin.from('aulas').select('id').eq('espaco_id', espacoId),
+  ])
+
+  for (const aula of aulas ?? []) {
+    const { data: arquivos } = await admin.storage.from(BUCKET_MATERIAIS).list(aula.id)
+    if (arquivos?.length) {
+      await admin.storage
+        .from(BUCKET_MATERIAIS)
+        .remove(arquivos.map((a) => `${aula.id}/${a.name}`))
+    }
+  }
+
+  for (const pasta of ['logos', 'banners', 'capas']) {
+    const { data: arquivos } = await admin.storage.from('conteudo').list(pasta, {
+      search: espacoId,
+    })
+    if (arquivos?.length) {
+      await admin.storage.from('conteudo').remove(arquivos.map((a) => `${pasta}/${a.name}`))
+    }
+  }
+
+  // Aulas antes de módulos: aulas.modulo_id é ON DELETE RESTRICT, e a cascata a
+  // partir de espacos não garante ordem entre as duas tabelas.
+  await admin.from('aulas').delete().eq('espaco_id', espacoId)
+  await admin.from('modulos').delete().eq('espaco_id', espacoId)
+  await admin.from('espacos').delete().eq('id', espacoId)
+
+  for (const r of revendedoras ?? []) {
+    if (r.user_id) await admin.auth.admin.deleteUser(r.user_id)
+  }
+  if (espaco.mentorado_user_id) {
+    await admin.from('user_roles').delete().eq('user_id', espaco.mentorado_user_id)
+    await admin.auth.admin.deleteUser(espaco.mentorado_user_id)
+  }
+
+  if (espaco.panda_folder_id) {
+    console.warn(
+      `Espaço ${espaco.slug} excluído. A pasta ${espaco.panda_folder_id} continua no Panda Video — remoção é manual.`
+    )
+  }
 
   revalidatePath('/admin/mentorados')
 }
