@@ -77,6 +77,12 @@ export function TourPainel() {
   const params = useSearchParams()
   const balaoRef = useRef<HTMLDivElement>(null)
   const [alvo, setAlvo] = useState<Retangulo | null>(null)
+  // Espera e fracasso são coisas diferentes: enquanto procura, o balão não
+  // aparece; só depois de desistir ele vai para o centro sem destaque.
+  const [procurando, setProcurando] = useState(true)
+  // Encerrar precisa valer na hora, antes de o servidor confirmar a marca —
+  // senão o início automático relê a URL sem ?tour e recomeça o tour.
+  const [encerrado, setEncerrado] = useState(false)
 
   // O passo mora na URL, e não em memória: assim ele atravessa a troca de página
   // sem depender de o React preservar o estado deste componente entre rotas.
@@ -88,19 +94,24 @@ export function TourPainel() {
   const ir = useCallback(
     (n: number) => {
       setAlvo(null)
+      setProcurando(true)
       router.push(`${PASSOS[n].rota}?tour=${n}`)
     },
     [router]
   )
 
   // Sem ?tour na URL, o tour começa sozinho — levando ela para a primeira página.
+  // O `encerrado` é o que impede isto de virar laço: sem ele, sair do tour tira
+  // o ?tour da URL e este mesmo efeito recomeça tudo.
   useEffect(() => {
-    if (passo === null) router.replace(`${PASSOS[0].rota}?tour=0`)
-  }, [passo, router])
+    if (!encerrado && passo === null) router.replace(`${PASSOS[0].rota}?tour=0`)
+  }, [encerrado, passo, router])
 
   const encerrar = useCallback(() => {
-    router.replace(pathname)
-    void marcarTourVisto()
+    // Some da tela na hora; a marca é gravada em seguida. Se a gravação falhar,
+    // o pior caso é ver o tour de novo num próximo acesso — nunca ficar presa.
+    setEncerrado(true)
+    void marcarTourVisto().finally(() => router.replace(pathname))
   }, [router, pathname])
 
   // Depois de navegar, o elemento do próximo passo ainda não existe. Em vez de
@@ -109,18 +120,27 @@ export function TourPainel() {
   useEffect(() => {
     if (!atual || pathname !== atual.rota) return
     let parado = false
-    const limite = Date.now() + 4000
+    // Achar leva alguns quadros no caso normal. O teto é curto de propósito:
+    // enquanto procura só há o escurecimento, sem botão para sair.
+    const limite = Date.now() + 2500
 
     const procurar = () => {
       if (parado) return
       const elemento = document.querySelector(atual.seletor)
       if (elemento) {
-        const r = elemento.getBoundingClientRect()
-        setAlvo({ top: r.top, left: r.left, width: r.width, height: r.height })
+        // Rolar até o elemento antes de medir: sem isto, um alvo fora da tela ou
+        // debaixo do cabeçalho fixo é destacado cortado.
+        elemento.scrollIntoView({ block: 'center', behavior: 'auto' })
+        requestAnimationFrame(() => {
+          if (parado) return
+          const r = elemento.getBoundingClientRect()
+          setAlvo({ top: r.top, left: r.left, width: r.width, height: r.height })
+          setProcurando(false)
+        })
         return
       }
       if (Date.now() < limite) requestAnimationFrame(procurar)
-      else setAlvo(null)
+      else setProcurando(false)
     }
     requestAnimationFrame(procurar)
 
@@ -169,7 +189,19 @@ export function TourPainel() {
     balaoRef.current?.focus()
   }, [passo])
 
-  if (passo === null || !atual) return null
+  if (encerrado || passo === null || !atual) return null
+
+  // Enquanto procura, fica só o escurecimento: o balão não pisca no centro para
+  // depois pular para o alvo.
+  if (procurando) {
+    return (
+      <div
+        className="fixed inset-0 z-50"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.72)' }}
+        aria-hidden
+      />
+    )
+  }
 
   const cabeAbaixo = alvo ? alvo.top + alvo.height + MARGEM + 220 < window.innerHeight : true
   const estilo: React.CSSProperties = alvo
