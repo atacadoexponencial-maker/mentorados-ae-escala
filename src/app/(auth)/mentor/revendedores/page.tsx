@@ -37,8 +37,12 @@ export default async function RevendedorasPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ImportarDialog />
-          <NovaRevendedoraDialog />
+          <span data-tour="importar">
+            <ImportarDialog />
+          </span>
+          <span data-tour="nova-revendedora">
+            <NovaRevendedoraDialog />
+          </span>
         </div>
       </div>
       <RevendedorasTable revendedoras={linhas} />

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { Store, User } from 'lucide-react'
 import { createClient } from '@/integrations/supabase/server'
@@ -98,7 +99,12 @@ export default async function MentorLayout({ children }: { children: React.React
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">{children}</main>
-      {mostrarTour && <TourPainel />}
+      {/* Suspense porque o tour lê o passo da query string (useSearchParams). */}
+      {mostrarTour && (
+        <Suspense fallback={null}>
+          <TourPainel />
+        </Suspense>
+      )}
     </div>
   )
 }

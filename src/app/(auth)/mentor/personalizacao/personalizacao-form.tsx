@@ -122,7 +122,7 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
             {/* Nome e cores vêm antes dos uploads: são os campos mais simples de
                 mexer, e enterrados abaixo de dois blocos de imagem com parágrafo
                 de instrução eles nem apareciam na primeira tela. */}
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="nome-curso">
               <Label htmlFor="nome-curso">Nome do curso</Label>
               <Input
                 id="nome-curso"
@@ -137,7 +137,7 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4" data-tour="cores">
               <CampoCor
                 id="cor-primaria"
                 name="corPrimaria"
@@ -156,7 +156,7 @@ export function PersonalizacaoForm({ espaco, espacoId }: { espaco: Espaco; espac
 
             <Separator />
 
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="logo">
               <Label htmlFor="logo">Logo</Label>
               <p className="text-xs text-muted-foreground">
                 PNG, JPG ou WEBP até 2 MB. Quadrada (ex.: 512×512 px). Ela é recortada em

@@ -24,9 +24,13 @@ export default async function ConteudoMentorPage() {
             Abaixo aparecem as aulas que você criar aqui.
           </p>
         </div>
-        <NovoModuloDialog espacoAlvo={contexto.espacoId} />
+        <span data-tour="novo-modulo">
+          <NovoModuloDialog espacoAlvo={contexto.espacoId} />
+        </span>
       </div>
-      <BaseHerdada modulos={baseHerdada} espacoId={contexto.espacoId} />
+      <div data-tour="conteudo-base">
+        <BaseHerdada modulos={baseHerdada} espacoId={contexto.espacoId} />
+      </div>
       <ConteudoLista modulos={modulos} />
     </div>
   )
