@@ -19,7 +19,9 @@ import { Label } from '@/components/ui/label'
 
 const estadoInicial: EstadoRevendedora = { ok: false, erro: null }
 
-export function NovaRevendedoraDialog() {
+// espacoAlvo só vem da tela da admin, que gerencia qualquer marca. Na tela da
+// mentorada ele é ausente e o servidor resolve o espaço pela sessão.
+export function NovaRevendedoraDialog({ espacoAlvo }: { espacoAlvo?: string }) {
   const [aberto, setAberto] = useState(false)
   const [estado, setEstado] = useState<EstadoRevendedora>(estadoInicial)
   const [pendente, iniciar] = useTransition()
@@ -52,6 +54,7 @@ export function NovaRevendedoraDialog() {
       </DialogTrigger>
       <DialogContent>
         <form action={acao} className="space-y-4">
+          {espacoAlvo && <input type="hidden" name="espacoId" value={espacoAlvo} />}
           <DialogHeader>
             <DialogTitle>Nova revendedora</DialogTitle>
             <DialogDescription>

@@ -11,31 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import type { Espaco } from '@/lib/espacos'
 import { PersonalizacaoForm } from '@/app/(auth)/mentor/personalizacao/personalizacao-form'
-
-const statusLabel: Record<string, string> = {
-  ativo: 'Ativa',
-  inativo: 'Inativa',
-  'convite-pendente': 'Convite pendente',
-}
-
-function formatarData(iso: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
+import {
+  RevendedorasTable,
+  type RevendedoraLinha,
+} from '@/app/(auth)/mentor/revendedores/revendedoras-table'
+import { NovaRevendedoraDialog } from '@/app/(auth)/mentor/revendedores/nova-revendedora-dialog'
+import { ImportarDialog } from '@/app/(auth)/mentor/revendedores/importar-dialog'
 
 export default async function DashboardMentoradoAdminPage({
   params,
@@ -54,11 +37,19 @@ export default async function DashboardMentoradoAdminPage({
 
   const { data: revendedoras } = await admin
     .from('revendedores')
-    .select('id, nome, email, status, ultimo_acesso')
+    .select('id, nome, email, whatsapp, status, ultimo_acesso')
     .eq('espaco_id', espaco.id)
     .order('created_at')
 
   const lista = revendedoras ?? []
+  const linhas: RevendedoraLinha[] = lista.map((r) => ({
+    id: r.id,
+    nome: r.nome,
+    email: r.email,
+    whatsapp: r.whatsapp,
+    status: r.status as RevendedoraLinha['status'],
+    ultimoAcesso: r.ultimo_acesso,
+  }))
   const contagens = {
     ativas: lista.filter((r) => r.status === 'ativo').length,
     inativas: lista.filter((r) => r.status === 'inativo').length,
@@ -123,43 +114,24 @@ export default async function DashboardMentoradoAdminPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Revendedoras</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>Revendedoras</CardTitle>
+              <CardDescription>
+                Você pode convidar e gerenciar as revendedoras desta marca daqui, como a própria
+                mentorada faria.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ImportarDialog espacoAlvo={espaco.id} />
+              <NovaRevendedoraDialog espacoAlvo={espaco.id} />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Último acesso</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lista.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    Nenhuma revendedora cadastrada
-                  </TableCell>
-                </TableRow>
-              ) : (
-                lista.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.nome ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={r.status === 'ativo' ? 'default' : 'secondary'}>
-                        {statusLabel[r.status] ?? r.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="tabular-nums text-muted-foreground">
-                      {formatarData(r.ultimo_acesso)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          {/* Mesma tabela da tela da mentorada: busca, filtros, menu por linha e
+              o diálogo do link de convite vêm junto. */}
+          <RevendedorasTable revendedoras={linhas} />
         </CardContent>
       </Card>
     </div>

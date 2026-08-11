@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 const estadoInicial: EstadoRevendedora = { ok: false, erro: null }
 
-export function ImportarDialog() {
+export function ImportarDialog({ espacoAlvo }: { espacoAlvo?: string }) {
   const [aberto, setAberto] = useState(false)
   const [estado, acao, pendente] = useActionState(importarRevendedoras, estadoInicial)
 
@@ -29,6 +29,7 @@ export function ImportarDialog() {
       </DialogTrigger>
       <DialogContent>
         <form action={acao} className="space-y-4">
+          {espacoAlvo && <input type="hidden" name="espacoId" value={espacoAlvo} />}
           <DialogHeader>
             <DialogTitle>Importar lista de revendedoras</DialogTitle>
             <DialogDescription>

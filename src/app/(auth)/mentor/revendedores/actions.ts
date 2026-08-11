@@ -4,6 +4,9 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/integrations/supabase/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
+import { exigirEscopoConteudo } from '@/app/(auth)/admin/conteudo/escopo'
+import { podeGerenciarEspaco } from '@/app/(auth)/admin/conteudo/autorizacao'
+import { ehUuid } from '@/lib/upload'
 
 export type EstadoRevendedora = {
   ok: boolean
@@ -131,7 +134,7 @@ export async function cadastrarRevendedora(
   _estadoAnterior: EstadoRevendedora,
   formData: FormData
 ): Promise<EstadoRevendedora> {
-  const contexto = await exigirMentorado()
+  const contexto = await espacoDaAcao(String(formData.get('espacoId') ?? '') || null)
   if (!contexto) return { ok: false, erro: 'Acesso negado' }
 
   const nome = String(formData.get('nome') ?? '').trim()
@@ -149,7 +152,7 @@ export async function cadastrarRevendedora(
   )
   if (!resultado.ok) return { ok: false, erro: resultado.erro }
 
-  revalidatePath('/mentor/revendedores')
+  revalidarRevendedoras(contexto.slug)
   return {
     ok: true,
     erro: null,
@@ -158,18 +161,53 @@ export async function cadastrarRevendedora(
   }
 }
 
-// Retorna a revendedora só se pertencer ao espaço do mentorado logado.
+// Em qual espaço esta ação vai agir. A admin escolhe pela tela; a mentorada só
+// pode o dela, e o id que vier do formulário é ignorado para ela.
+//
+// Reusa `exigirEscopoConteudo`/`podeGerenciarEspaco`: apesar do nome, a regra
+// ali é "admin gerencia qualquer espaço, mentorado só o próprio" — exatamente
+// esta. Duplicar criaria uma segunda verdade sobre isolamento entre marcas, que
+// é o último lugar do sistema onde se pode ter duas versões da mesma regra.
+async function espacoDaAcao(
+  espacoIdDoFormulario: string | null
+): Promise<{ espacoId: string; slug: string } | null> {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return null
+
+  const alvo = escopo.ehAdmin ? espacoIdDoFormulario : escopo.espacoId
+  if (!alvo || !ehUuid(alvo) || !podeGerenciarEspaco(escopo, alvo)) return null
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('espacos')
+    .select('id, slug, ativo')
+    .eq('id', alvo)
+    .maybeSingle()
+  if (!data?.ativo) return null
+  return { espacoId: data.id, slug: data.slug }
+}
+
+// Retorna a revendedora só se quem está logado puder gerenciar o espaço dela.
 async function revendedoraDoEspaco(revendedoraId: string) {
-  const contexto = await exigirMentorado()
-  if (!contexto) return null
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return null
   const admin = createAdminClient()
   const { data } = await admin
     .from('revendedores')
-    .select('id, user_id, email, nome, status, espaco_id')
+    .select('id, user_id, email, nome, status, espaco_id, espacos(slug)')
     .eq('id', revendedoraId)
-    .eq('espaco_id', contexto.espacoId)
     .maybeSingle()
-  return data ? { revendedora: data, contexto } : null
+  if (!data || !podeGerenciarEspaco(escopo, data.espaco_id)) return null
+
+  const slug = (data as unknown as { espacos: { slug: string } | null }).espacos?.slug ?? ''
+  return { revendedora: data, contexto: { espacoId: data.espaco_id, slug } }
+}
+
+// As duas telas que listam revendedora precisam recarregar depois de qualquer
+// ação: a da mentorada e a da admin, que agora também mexe.
+function revalidarRevendedoras(slug: string) {
+  revalidatePath('/mentor/revendedores')
+  if (slug) revalidatePath(`/admin/mentorados/${slug}`)
 }
 
 export type ResultadoLinkConvite = { ok: true; link: string } | { ok: false; erro: string }
@@ -223,7 +261,7 @@ export async function desativarRevendedora(revendedoraId: string): Promise<void>
   if (!alvo) return
   const admin = createAdminClient()
   await admin.from('revendedores').update({ status: 'inativo' }).eq('id', revendedoraId)
-  revalidatePath('/mentor/revendedores')
+  revalidarRevendedoras(alvo.contexto.slug)
 }
 
 export async function reativarRevendedora(revendedoraId: string): Promise<void> {
@@ -231,7 +269,7 @@ export async function reativarRevendedora(revendedoraId: string): Promise<void> 
   if (!alvo) return
   const admin = createAdminClient()
   await admin.from('revendedores').update({ status: 'ativo' }).eq('id', revendedoraId)
-  revalidatePath('/mentor/revendedores')
+  revalidarRevendedoras(alvo.contexto.slug)
 }
 
 export async function reenviarConviteRevendedora(revendedoraId: string): Promise<void> {
@@ -274,7 +312,7 @@ export async function reenviarConviteRevendedora(revendedoraId: string): Promise
       .eq('id', revendedoraId)
   }
 
-  revalidatePath('/mentor/revendedores')
+  revalidarRevendedoras(alvo.contexto.slug)
 }
 
 export async function excluirRevendedora(revendedoraId: string): Promise<void> {
@@ -288,14 +326,14 @@ export async function excluirRevendedora(revendedoraId: string): Promise<void> {
     await admin.auth.admin.deleteUser(alvo.revendedora.user_id)
   }
 
-  revalidatePath('/mentor/revendedores')
+  revalidarRevendedoras(alvo.contexto.slug)
 }
 
 export async function importarRevendedoras(
   _estadoAnterior: EstadoRevendedora,
   formData: FormData
 ): Promise<EstadoRevendedora> {
-  const contexto = await exigirMentorado()
+  const contexto = await espacoDaAcao(String(formData.get('espacoId') ?? '') || null)
   if (!contexto) return { ok: false, erro: 'Acesso negado' }
 
   const lista = String(formData.get('lista') ?? '').trim()
@@ -332,7 +370,7 @@ export async function importarRevendedoras(
     }
   }
 
-  revalidatePath('/mentor/revendedores')
+  revalidarRevendedoras(contexto.slug)
   const resumo = [
     `${criadas} ${criadas === 1 ? 'revendedora criada' : 'revendedoras criadas'}`,
     falhas.length ? `${falhas.length} ${falhas.length === 1 ? 'falha' : 'falhas'}: ${falhas.join(' · ')}` : null,
