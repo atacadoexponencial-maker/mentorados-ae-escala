@@ -9,9 +9,11 @@ import { Label } from '@/components/ui/label'
 
 const estadoInicial: EstadoLogin = { erro: null }
 
-export function LoginForm({ espacoSlug }: { espacoSlug?: string }) {
+export function LoginForm({ espacoSlug, prefixo }: { espacoSlug?: string; prefixo?: string }) {
   const [estado, acao, pendente] = useActionState(fazerLogin, estadoInicial)
-  const linkRecuperar = espacoSlug ? `/${espacoSlug}/recuperar-senha` : '/recuperar-senha'
+  const linkRecuperar = espacoSlug
+    ? `${prefixo ?? `/${espacoSlug}`}/recuperar-senha`
+    : '/recuperar-senha'
 
   return (
     <form action={acao} className="space-y-5">

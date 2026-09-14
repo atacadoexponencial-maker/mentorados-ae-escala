@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/integrations/supabase/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
+import { slugDoDominioAtual } from '@/lib/dominio/requisicao'
 import {
   SENHA_MINIMA,
   ERRO_SENHA_CURTA,
@@ -62,5 +63,6 @@ export async function definirSenha(
     .eq('user_id', user.id)
     .maybeSingle()
   const slug = (revendedor as { espacos?: { slug?: string } } | null)?.espacos?.slug
-  redirect(slug ? `/${slug}` : '/login')
+  const noDominioProprio = Boolean(await slugDoDominioAtual())
+  redirect(slug ? (noDominioProprio ? '/' : `/${slug}`) : '/login')
 }

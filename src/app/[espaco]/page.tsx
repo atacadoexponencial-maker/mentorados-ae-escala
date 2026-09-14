@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { CheckCircle2, Play } from 'lucide-react'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
+import { prefixoDoEspaco } from '@/lib/dominio/requisicao'
 import { ehPreview } from '@/lib/preview'
 import { formatarDuracao } from '@/lib/mock-data'
 import { createClient } from '@/integrations/supabase/server'
@@ -22,8 +23,9 @@ export default async function CatalogoPage({
   const dados = await getEspacoPorSlug(espaco)
   if (!dados) notFound()
 
+  const prefixo = await prefixoDoEspaco(dados.slug)
   const vinculo = await getVinculoDoUsuario()
-  if (!vinculo) redirect(`/${dados.slug}/login`)
+  if (!vinculo) redirect(`${prefixo}/login`)
 
   // Revendedora só enxerga o próprio espaço; mentorado/admin podem visualizar
   if (
@@ -85,11 +87,11 @@ export default async function CatalogoPage({
           nomeCurso={dados.nome_curso}
           logoUrl={dados.logo_url}
           corPrimaria={dados.cor_primaria}
-          primeiraAulaHref={primeiraAula ? `/${dados.slug}/aula/${primeiraAula.id}` : null}
+          primeiraAulaHref={primeiraAula ? `${prefixo}/aula/${primeiraAula.id}` : null}
         />
       )}
       {preview && <FaixaPreview />}
-      <EspacoHeader espaco={dados} emailUsuario={vinculo.email ?? undefined} />
+      <EspacoHeader espaco={dados} prefixo={prefixo} emailUsuario={vinculo.email ?? undefined} />
 
       {dados.banner_url ? (
         <div className="w-full overflow-hidden border-b border-border">
@@ -147,7 +149,7 @@ export default async function CatalogoPage({
                         : ''}
                     </p>
                   </div>
-                  <Button render={<Link href={`/${dados.slug}/aula/${aulaEmAndamento.id}`} />}>
+                  <Button render={<Link href={`${prefixo}/aula/${aulaEmAndamento.id}`} />}>
                     <Play className="mr-2 h-4 w-4" />
                     Continuar
                   </Button>
@@ -172,7 +174,7 @@ export default async function CatalogoPage({
                     {modulo.aulas.map((aula, indice) => (
                       <Link
                         key={aula.id}
-                        href={`/${dados.slug}/aula/${aula.id}`}
+                        href={`${prefixo}/aula/${aula.id}`}
                         className="card-tilt block w-[180px] sm:w-[200px]"
                       >
                         <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-border bg-muted">

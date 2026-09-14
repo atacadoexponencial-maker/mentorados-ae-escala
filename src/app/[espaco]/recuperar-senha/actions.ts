@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { createClient } from '@/integrations/supabase/server'
+import { enderecoDoEspaco } from '@/lib/dominio/regras'
 
 export type EstadoRecuperacao = { enviado: boolean; erro: string | null }
 
@@ -14,11 +15,26 @@ export async function solicitarRedefinicao(
 
   const cabecalhos = await headers()
   const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
-  const destino = espacoSlug ? `/${espacoSlug}/redefinir-senha` : '/redefinir-senha'
-
   const supabase = await createClient()
+
+  // Link do e-mail leva ao endereço do espaço (domínio próprio quando ativo)
+  let base = origem
+  if (espacoSlug) {
+    const { data: espaco } = await supabase
+      .from('espacos')
+      .select('slug, dominio, dominio_ativo')
+      .eq('slug', espacoSlug)
+      .maybeSingle()
+    const endereco = enderecoDoEspaco(
+      espaco ?? { slug: espacoSlug, dominio: null, dominio_ativo: false },
+      origem
+    )
+    base = `${endereco.origem}${endereco.prefixo}`
+  }
+  const destino = '/redefinir-senha'
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origem}${destino}`,
+    redirectTo: `${base}${destino}`,
   })
 
   // Resposta neutra: não revela se a conta existe (rate limit também cai aqui)

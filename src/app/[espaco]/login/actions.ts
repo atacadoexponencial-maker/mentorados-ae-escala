@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/integrations/supabase/server'
 import { createAdminClient } from '@/integrations/supabase/admin'
+import { slugDoDominioAtual } from '@/lib/dominio/requisicao'
+import { urlDaPlataforma } from '@/lib/dominio/regras'
 
 export type EstadoLogin = { erro: string | null }
 
@@ -30,6 +32,13 @@ export async function fazerLogin(
     .eq('user_id', auth.user.id)
 
   const roles = new Set((papeis ?? []).map((p: { role: string }) => p.role))
+
+  // Painéis da equipe e dos mentorados só existem no endereço da plataforma.
+  const noDominioProprio = Boolean(await slugDoDominioAtual())
+  if (noDominioProprio && (roles.has('admin') || roles.has('mentorado'))) {
+    await supabase.auth.signOut()
+    redirect(`${urlDaPlataforma()}/login?aviso=dominio-proprio`)
+  }
 
   if (roles.has('admin')) {
     redirect('/admin/mentorados')
@@ -82,7 +91,7 @@ export async function fazerLogin(
         .from('revendedores')
         .update({ ultimo_acesso: new Date().toISOString() })
         .eq('user_id', auth.user.id)
-      redirect(`/${slug}`)
+      redirect(noDominioProprio ? '/' : `/${slug}`)
     }
   }
 

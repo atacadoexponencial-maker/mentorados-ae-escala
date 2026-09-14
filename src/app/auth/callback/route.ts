@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/integrations/supabase/server'
+import { CABECALHO_ESPACO_DOMINIO } from '@/lib/dominio/rotas'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -15,9 +16,15 @@ export async function GET(request: NextRequest) {
   }
 
   // Code ausente/expirado: manda para o login do espaço do destino (ou da equipe)
+  // No domínio próprio o login do espaço é simplesmente /login
   const segmento = next.split('/')[1]
+  const noDominioProprio = Boolean(request.headers.get(CABECALHO_ESPACO_DOMINIO))
   const destino =
-    segmento && segmento !== 'admin' && segmento !== 'mentor' && segmento !== 'login'
+    !noDominioProprio &&
+    segmento &&
+    segmento !== 'admin' &&
+    segmento !== 'mentor' &&
+    segmento !== 'login'
       ? `/${segmento}/login`
       : '/login'
   return NextResponse.redirect(new URL(destino, origin))

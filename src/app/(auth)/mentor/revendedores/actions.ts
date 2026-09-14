@@ -7,6 +7,7 @@ import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo } from '@/app/(auth)/admin/conteudo/escopo'
 import { podeGerenciarEspaco } from '@/app/(auth)/admin/conteudo/autorizacao'
 import { ehUuid } from '@/lib/upload'
+import { enderecoDoEspaco, type EspacoComDominio } from '@/lib/dominio/regras'
 
 export type EstadoRevendedora = {
   ok: boolean
@@ -54,7 +55,7 @@ type ResultadoCriacao =
 
 // Núcleo compartilhado entre cadastro individual e importação em massa.
 async function criarRevendedora(
-  contexto: { espacoId: string; slug: string; origem: string },
+  contexto: { espacoId: string; slug: string; origem: string; prefixo: string },
   dados: { nome: string; email: string; whatsapp: string | null }
 ): Promise<ResultadoCriacao> {
   const admin = createAdminClient()
@@ -84,7 +85,7 @@ async function criarRevendedora(
     dados.email,
     {
       data: { nome: dados.nome },
-      redirectTo: `${contexto.origem}/${contexto.slug}/primeiro-acesso`,
+      redirectTo: `${contexto.origem}${contexto.prefixo}/primeiro-acesso`,
     }
   )
   if (convite?.user) {
@@ -147,7 +148,7 @@ export async function cadastrarRevendedora(
   const cabecalhos = await headers()
   const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
   const resultado = await criarRevendedora(
-    { espacoId: contexto.espacoId, slug: contexto.slug, origem },
+    { espacoId: contexto.espacoId, slug: contexto.slug, ...enderecoDoEspaco(contexto.espaco, origem) },
     { nome, email, whatsapp }
   )
   if (!resultado.ok) return { ok: false, erro: resultado.erro }
@@ -170,7 +171,7 @@ export async function cadastrarRevendedora(
 // é o último lugar do sistema onde se pode ter duas versões da mesma regra.
 async function espacoDaAcao(
   espacoIdDoFormulario: string | null
-): Promise<{ espacoId: string; slug: string } | null> {
+): Promise<{ espacoId: string; slug: string; espaco: EspacoComDominio } | null> {
   const escopo = await exigirEscopoConteudo()
   if (!escopo) return null
 
@@ -180,11 +181,11 @@ async function espacoDaAcao(
   const admin = createAdminClient()
   const { data } = await admin
     .from('espacos')
-    .select('id, slug, ativo')
+    .select('id, slug, ativo, dominio, dominio_ativo')
     .eq('id', alvo)
     .maybeSingle()
   if (!data?.ativo) return null
-  return { espacoId: data.id, slug: data.slug }
+  return { espacoId: data.id, slug: data.slug, espaco: data }
 }
 
 // Retorna a revendedora só se quem está logado puder gerenciar o espaço dela.
@@ -194,13 +195,20 @@ async function revendedoraDoEspaco(revendedoraId: string) {
   const admin = createAdminClient()
   const { data } = await admin
     .from('revendedores')
-    .select('id, user_id, email, nome, status, espaco_id, espacos(slug)')
+    .select('id, user_id, email, nome, status, espaco_id, espacos(slug, dominio, dominio_ativo)')
     .eq('id', revendedoraId)
     .maybeSingle()
   if (!data || !podeGerenciarEspaco(escopo, data.espaco_id)) return null
 
-  const slug = (data as unknown as { espacos: { slug: string } | null }).espacos?.slug ?? ''
-  return { revendedora: data, contexto: { espacoId: data.espaco_id, slug } }
+  const espaco = (data as unknown as { espacos: EspacoComDominio | null }).espacos ?? {
+    slug: '',
+    dominio: null,
+    dominio_ativo: false,
+  }
+  return {
+    revendedora: data,
+    contexto: { espacoId: data.espaco_id, slug: espaco.slug, espaco },
+  }
 }
 
 // As duas telas que listam revendedora precisam recarregar depois de qualquer
@@ -232,8 +240,11 @@ export async function gerarLinkConvite(revendedoraId: string): Promise<Resultado
   }
 
   const cabecalhos = await headers()
-  const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
-  const destino = `/${alvo.contexto.slug}/primeiro-acesso`
+  const { origem, prefixo } = enderecoDoEspaco(
+    alvo.contexto.espaco,
+    cabecalhos.get('origin') ?? 'http://localhost:3000'
+  )
+  const destino = `${prefixo}/primeiro-acesso`
 
   const admin = createAdminClient()
   const { data, error } = await admin.auth.admin.generateLink({
@@ -284,12 +295,15 @@ export async function reenviarConviteRevendedora(revendedoraId: string): Promise
   }
 
   const cabecalhos = await headers()
-  const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
+  const { origem, prefixo } = enderecoDoEspaco(
+    alvo.contexto.espaco,
+    cabecalhos.get('origin') ?? 'http://localhost:3000'
+  )
   const { data: convite, error } = await admin.auth.admin.inviteUserByEmail(
     alvo.revendedora.email,
     {
       data: { nome: alvo.revendedora.nome },
-      redirectTo: `${origem}/${alvo.contexto.slug}/primeiro-acesso`,
+      redirectTo: `${origem}${prefixo}/primeiro-acesso`,
     }
   )
   const novoUsuario = convite?.user
@@ -340,7 +354,10 @@ export async function importarRevendedoras(
   if (!lista) return { ok: false, erro: 'Cole a lista de revendedoras' }
 
   const cabecalhos = await headers()
-  const origem = cabecalhos.get('origin') ?? 'http://localhost:3000'
+  const endereco = enderecoDoEspaco(
+    contexto.espaco,
+    cabecalhos.get('origin') ?? 'http://localhost:3000'
+  )
 
   const linhas = lista
     .split('\n')
@@ -359,7 +376,7 @@ export async function importarRevendedoras(
       continue
     }
     const resultado = await criarRevendedora(
-      { espacoId: contexto.espacoId, slug: contexto.slug, origem },
+      { espacoId: contexto.espacoId, slug: contexto.slug, ...endereco },
       { nome: nomeBruto, email, whatsapp: null }
     )
     if (resultado.ok) {

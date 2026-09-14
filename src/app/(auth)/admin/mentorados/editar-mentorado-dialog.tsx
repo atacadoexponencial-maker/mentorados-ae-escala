@@ -57,6 +57,12 @@ export function EditarMentoradoDialog({
             <div className="space-y-2">
               <Label htmlFor="edit-endereco">Endereço do espaço</Label>
               <Input id="edit-endereco" name="endereco" defaultValue={mentorado.slug} required />
+              {mentorado.dominioAtivo && mentorado.dominio && (
+                <p className="text-xs text-muted-foreground">
+                  As revendedoras entram por {mentorado.dominio}. Este endereço interno só aparece no
+                  painel.
+                </p>
+              )}
             </div>
             {estado.erro && (
               <p role="alert" className="text-sm text-destructive">

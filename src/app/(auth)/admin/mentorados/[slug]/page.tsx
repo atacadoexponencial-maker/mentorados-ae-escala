@@ -19,6 +19,7 @@ import {
 } from '@/app/(auth)/mentor/revendedores/revendedoras-table'
 import { NovaRevendedoraDialog } from '@/app/(auth)/mentor/revendedores/nova-revendedora-dialog'
 import { ImportarDialog } from '@/app/(auth)/mentor/revendedores/importar-dialog'
+import { DominioCard } from './dominio-card'
 
 export default async function DashboardMentoradoAdminPage({
   params,
@@ -30,7 +31,7 @@ export default async function DashboardMentoradoAdminPage({
 
   const { data: espaco } = await admin
     .from('espacos')
-    .select('id, slug, nome_curso, logo_url, banner_url, cor_primaria, cor_destaque, ativo')
+    .select('id, slug, nome_curso, logo_url, banner_url, cor_primaria, cor_destaque, ativo, dominio, dominio_ativo')
     .eq('slug', slug)
     .maybeSingle()
   if (!espaco) notFound()
@@ -68,7 +69,9 @@ export default async function DashboardMentoradoAdminPage({
 
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">{espaco.nome_curso}</h1>
-        <span className="text-sm text-muted-foreground">/{espaco.slug}</span>
+        <span className="text-sm text-muted-foreground">
+          {espaco.dominio_ativo && espaco.dominio ? espaco.dominio : `/${espaco.slug}`}
+        </span>
         <Badge variant={espaco.ativo ? 'default' : 'secondary'}>
           {espaco.ativo ? 'Ativo' : 'Inativo'}
         </Badge>
@@ -100,11 +103,19 @@ export default async function DashboardMentoradoAdminPage({
         ))}
       </div>
 
+      <DominioCard
+        espacoId={espaco.id}
+        slug={espaco.slug}
+        dominio={espaco.dominio}
+        dominioAtivo={espaco.dominio_ativo}
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>Personalização</CardTitle>
           <CardDescription>
-            A identidade que as revendedoras veem em /{espaco.slug}
+            A identidade que as revendedoras veem em{' '}
+            {espaco.dominio_ativo && espaco.dominio ? espaco.dominio : `/${espaco.slug}`}
           </CardDescription>
         </CardHeader>
         <CardContent>

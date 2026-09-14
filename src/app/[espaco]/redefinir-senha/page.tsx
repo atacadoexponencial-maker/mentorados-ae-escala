@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { getEspacoPorSlug } from '@/lib/espacos'
+import { prefixoDoEspaco } from '@/lib/dominio/requisicao'
 import { createClient } from '@/integrations/supabase/server'
 import { PrimeiroAcessoForm } from '@/app/[espaco]/primeiro-acesso/primeiro-acesso-form'
 
@@ -16,7 +17,7 @@ export default async function RedefinirSenhaPage({
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) redirect(`/${dados.slug}/login`)
+  if (!user) redirect(`${await prefixoDoEspaco(dados.slug)}/login`)
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">

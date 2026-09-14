@@ -10,12 +10,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export function EspacoHeader({ espaco, emailUsuario }: { espaco: Espaco; emailUsuario?: string }) {
+// `prefixo`: '' quando servido pelo domínio próprio, '/slug' na plataforma.
+export function EspacoHeader({
+  espaco,
+  prefixo,
+  emailUsuario,
+}: {
+  espaco: Espaco
+  prefixo: string
+  emailUsuario?: string
+}) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-4 px-4">
         <Link
-          href={`/${espaco.slug}`}
+          href={prefixo || '/'}
           className="flex items-center gap-3"
         >
           {espaco.logo_url ? (
@@ -40,7 +49,7 @@ export function EspacoHeader({ espaco, emailUsuario }: { espaco: Espaco; emailUs
                 {emailUsuario ?? ''}
               </div>
               <DropdownMenuSeparator />
-              <BotaoSair destino={`/${espaco.slug}/login`} />
+              <BotaoSair destino={`${prefixo}/login`} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

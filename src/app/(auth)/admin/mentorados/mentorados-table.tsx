@@ -85,7 +85,9 @@ export function MentoradosTable({ mentorados }: { mentorados: MentoradoLinha[] }
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.nome}</TableCell>
                   <TableCell>{m.marca}</TableCell>
-                  <TableCell className="text-muted-foreground">/{m.slug}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {m.dominioAtivo && m.dominio ? m.dominio : `/${m.slug}`}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{m.qtdRevendedores}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariant[m.status]}>{statusLabel[m.status]}</Badge>

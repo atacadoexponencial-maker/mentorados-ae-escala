@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getEspacoPorSlug } from '@/lib/espacos'
+import { prefixoDoEspaco } from '@/lib/dominio/requisicao'
 import { LoginForm } from './login-form'
 
 export default async function LoginPage({
@@ -10,6 +11,7 @@ export default async function LoginPage({
   const { espaco } = await params
   const dados = await getEspacoPorSlug(espaco)
   if (!dados) notFound()
+  const prefixo = await prefixoDoEspaco(dados.slug)
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -31,7 +33,7 @@ export default async function LoginPage({
           </div>
         </div>
         {dados.ativo ? (
-          <LoginForm espacoSlug={dados.slug} />
+          <LoginForm espacoSlug={dados.slug} prefixo={prefixo} />
         ) : (
           <p className="text-center text-sm text-muted-foreground">
             Este espaço está temporariamente indisponível. Fale com o Atacado Exponencial.

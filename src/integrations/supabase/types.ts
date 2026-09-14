@@ -17,6 +17,8 @@ export type Database = {
           mentorado_user_id: string | null
           panda_folder_id: string | null
           onboarding_visto_em: string | null
+          dominio: string | null
+          dominio_ativo: boolean
           created_at: string
         }
         Insert: {
@@ -31,6 +33,8 @@ export type Database = {
           mentorado_user_id?: string | null
           panda_folder_id?: string | null
           onboarding_visto_em?: string | null
+          dominio?: string | null
+          dominio_ativo?: boolean
           created_at?: string
         }
         Update: {
@@ -45,6 +49,8 @@ export type Database = {
           mentorado_user_id?: string | null
           panda_folder_id?: string | null
           onboarding_visto_em?: string | null
+          dominio?: string | null
+          dominio_ativo?: boolean
           created_at?: string
         }
       }

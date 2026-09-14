@@ -8,6 +8,8 @@ export type MentoradoLinha = {
   email: string
   marca: string
   slug: string
+  dominio: string | null
+  dominioAtivo: boolean
   qtdRevendedores: number
   status: 'ativo' | 'inativo' | 'convite-pendente'
 }
@@ -18,7 +20,7 @@ export async function listarMentorados(): Promise<MentoradoLinha[]> {
   const [{ data: espacos }, { data: revendedores }, { data: usuarios }] = await Promise.all([
     admin
       .from('espacos')
-      .select('id, slug, nome_curso, ativo, mentorado_user_id, created_at')
+      .select('id, slug, nome_curso, ativo, mentorado_user_id, created_at, dominio, dominio_ativo')
       .order('created_at'),
     admin.from('revendedores').select('espaco_id'),
     admin.auth.admin.listUsers({ perPage: 1000 }),
@@ -54,6 +56,8 @@ export async function listarMentorados(): Promise<MentoradoLinha[]> {
       email: perfil?.email ?? '—',
       marca: e.nome_curso,
       slug: e.slug,
+      dominio: e.dominio,
+      dominioAtivo: e.dominio_ativo,
       qtdRevendedores: contagem.get(e.id) ?? 0,
       status,
     }

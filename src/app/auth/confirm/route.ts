@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/integrations/supabase/server'
+import { CABECALHO_ESPACO_DOMINIO } from '@/lib/dominio/rotas'
 
 // Consome links de e-mail (convite, recuperação) no padrão SSR do Supabase:
 // /auth/confirm?token_hash=…&type=invite|recovery&next=/caminho
@@ -20,9 +21,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // No domínio próprio o login do espaço é simplesmente /login
   const segmento = next.split('/')[1]
+  const noDominioProprio = Boolean(request.headers.get(CABECALHO_ESPACO_DOMINIO))
   const destino =
-    segmento && segmento !== 'admin' && segmento !== 'mentor' && segmento !== 'login'
+    !noDominioProprio &&
+    segmento &&
+    segmento !== 'admin' &&
+    segmento !== 'mentor' &&
+    segmento !== 'login'
       ? `/${segmento}/login`
       : '/login'
   return NextResponse.redirect(new URL(destino, origin))

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Play } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
 import { getEspacoPorSlug } from '@/lib/espacos'
 import { getVinculoDoUsuario } from '@/lib/vinculo'
+import { prefixoDoEspaco } from '@/lib/dominio/requisicao'
 import { ehPreview } from '@/lib/preview'
 import { createClient } from '@/integrations/supabase/server'
 import { carregarCatalogo } from '@/lib/catalogo'
@@ -24,8 +25,9 @@ export default async function AulaPage({
   const dados = await getEspacoPorSlug(espaco)
   if (!dados) notFound()
 
+  const prefixo = await prefixoDoEspaco(dados.slug)
   const vinculo = await getVinculoDoUsuario()
-  if (!vinculo) redirect(`/${dados.slug}/login`)
+  if (!vinculo) redirect(`${prefixo}/login`)
   if (
     vinculo.revendedor &&
     !vinculo.roles.has('admin') &&
@@ -70,11 +72,11 @@ export default async function AulaPage({
   return (
     <div className="flex min-h-screen flex-col">
       {preview && <FaixaPreview />}
-      <EspacoHeader espaco={dados} emailUsuario={vinculo.email ?? undefined} />
+      <EspacoHeader espaco={dados} prefixo={prefixo} emailUsuario={vinculo.email ?? undefined} />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
         <Link
-          href={`/${dados.slug}`}
+          href={prefixo || '/'}
           className="mb-4 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -124,7 +126,7 @@ export default async function AulaPage({
 
         <div className="mt-8 flex items-center justify-between gap-4">
           {anterior ? (
-            <Button variant="outline" render={<Link href={`/${dados.slug}/aula/${anterior.id}`} />}>
+            <Button variant="outline" render={<Link href={`${prefixo}/aula/${anterior.id}`} />}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Aula anterior
             </Button>
@@ -132,7 +134,7 @@ export default async function AulaPage({
             <span />
           )}
           {proxima ? (
-            <Button render={<Link href={`/${dados.slug}/aula/${proxima.id}`} />}>
+            <Button render={<Link href={`${prefixo}/aula/${proxima.id}`} />}>
               Próxima aula
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
