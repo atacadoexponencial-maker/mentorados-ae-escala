@@ -13,6 +13,9 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Mentorados AE Escala",
   description: "Plataforma white-label de treinamento para revendedores",
+  // Ícone da plataforma declarado aqui (e não por app/favicon.ico) para que o
+  // layout do espaço possa trocá-lo pela logo da marca.
+  icons: "/favicon.ico",
 };
 
 export default function RootLayout({

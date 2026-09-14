@@ -1,5 +1,22 @@
 import { getEspacoPorSlug } from '@/lib/espacos'
+import type { Metadata } from 'next'
 import { corDoTextoSobre } from '@/lib/capas'
+
+// A aba do navegador mostra a marca do espaço: nome do curso e logo como ícone.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ espaco: string }>
+}): Promise<Metadata> {
+  const { espaco } = await params
+  const dados = await getEspacoPorSlug(espaco)
+  if (!dados) return {}
+  return {
+    title: dados.nome_curso,
+    description: '',
+    ...(dados.logo_url ? { icons: dados.logo_url } : {}),
+  }
+}
 
 export default async function EspacoLayout({
   children,
