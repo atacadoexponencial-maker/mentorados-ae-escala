@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus } from 'lucide-react'
 import { formatarDuracao } from '@/lib/mock-data'
 import {
+  definirAntesDaBase,
   despublicarAula,
   excluirAula,
   excluirModulo,
@@ -38,7 +39,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
+export function ConteudoLista({
+  modulos,
+  podeMarcarAntesDaBase = false,
+}: {
+  modulos: ModuloLinha[]
+  podeMarcarAntesDaBase?: boolean
+}) {
   const [editandoModulo, setEditandoModulo] = useState<ModuloLinha | null>(null)
   const [novaAulaEm, setNovaAulaEm] = useState<{ id: string; titulo: string } | null>(null)
   const [capaDe, setCapaDe] = useState<AulaLinha | null>(null)
@@ -68,6 +75,11 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
             <div>
               <CardTitle>
                 Módulo {modulo.ordem} — {modulo.titulo}
+                {modulo.antesDaBase && (
+                  <Badge variant="secondary" className="ml-2 align-middle">
+                    Antes do conteúdo base
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 {modulo.descricao ? `${modulo.descricao} · ` : ''}
@@ -101,6 +113,18 @@ export function ConteudoLista({ modulos }: { modulos: ModuloLinha[] }) {
               >
                 <ArrowDown className="h-4 w-4" />
               </Button>
+              {podeMarcarAntesDaBase && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pendente}
+                  onClick={() =>
+                    iniciarTransicao(() => definirAntesDaBase(modulo.id, !modulo.antesDaBase))
+                  }
+                >
+                  {modulo.antesDaBase ? 'Voltar para depois da base' : 'Colocar antes da base'}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

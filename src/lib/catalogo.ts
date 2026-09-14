@@ -5,6 +5,7 @@
 import 'server-only'
 import { createClient } from '@/integrations/supabase/server'
 import { resolverCapa } from './capas'
+import { ordenarModulosDoCatalogo } from './ordem-catalogo'
 
 export type AulaCatalogo = {
   id: string
@@ -29,12 +30,7 @@ export async function carregarCatalogo(espacoId: string): Promise<ModuloCatalogo
   const filtroEspaco = `espaco_id.is.null,espaco_id.eq.${espacoId}`
 
   const [{ data: modulos }, { data: aulas }, { data: capas }] = await Promise.all([
-    supabase
-      .from('modulos')
-      .select('id, titulo, ordem')
-      .or(filtroEspaco)
-      .order('espaco_id', { nullsFirst: true })
-      .order('ordem'),
+    supabase.from('modulos').select('id, titulo, ordem, espaco_id, antes_da_base').or(filtroEspaco),
     supabase
       .from('aulas')
       .select('id, modulo_id, titulo, descricao, panda_video_id, capa_url, duracao_segundos, ordem')
@@ -47,7 +43,7 @@ export async function carregarCatalogo(espacoId: string): Promise<ModuloCatalogo
   // Capa personalizada por marca, indexada por aula, para resolver a exceção na hora de montar o catálogo.
   const capaPorAula = new Map((capas ?? []).map((c) => [c.aula_id, c.capa_url]))
 
-  return (modulos ?? []).map((m) => ({
+  return ordenarModulosDoCatalogo(modulos ?? []).map((m) => ({
     id: m.id,
     titulo: m.titulo,
     ordem: m.ordem,

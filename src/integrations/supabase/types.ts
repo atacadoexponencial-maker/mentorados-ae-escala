@@ -140,6 +140,7 @@ export type Database = {
           ordem: number
           espaco_id: string | null
           panda_folder_id: string | null
+          antes_da_base: boolean
           created_at: string
         }
         Insert: {
@@ -149,6 +150,7 @@ export type Database = {
           ordem?: number
           espaco_id?: string | null
           panda_folder_id?: string | null
+          antes_da_base?: boolean
           created_at?: string
         }
         Update: {
@@ -158,6 +160,7 @@ export type Database = {
           ordem?: number
           espaco_id?: string | null
           panda_folder_id?: string | null
+          antes_da_base?: boolean
           created_at?: string
         }
       }

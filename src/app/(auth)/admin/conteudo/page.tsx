@@ -39,7 +39,7 @@ export default async function ConteudoPage({
         </div>
       </div>
       {espacoSelecionado && <BaseHerdada modulos={baseHerdada} espacoId={espacoSelecionado} />}
-      <ConteudoLista modulos={modulos} />
+      <ConteudoLista modulos={modulos} podeMarcarAntesDaBase={espacoSelecionado !== null} />
     </div>
   )
 }

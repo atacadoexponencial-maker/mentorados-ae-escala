@@ -28,6 +28,7 @@ export type ModuloLinha = {
   titulo: string
   descricao: string | null
   ordem: number
+  antesDaBase: boolean
   aulas: AulaLinha[]
 }
 
@@ -35,9 +36,13 @@ export async function listarConteudo(espacoId: string | null): Promise<ModuloLin
   const admin = createAdminClient()
 
   const [{ data: modulos }, { data: aulas }, { data: materiais }] = await Promise.all([
-    filtrarEscopo(admin.from('modulos').select('id, titulo, descricao, ordem'), espacoId).order(
-      'ordem'
-    ),
+    // Marcados "antes da base" primeiro, como no catálogo da revendedora.
+    filtrarEscopo(
+      admin.from('modulos').select('id, titulo, descricao, ordem, antes_da_base'),
+      espacoId
+    )
+      .order('antes_da_base', { ascending: false })
+      .order('ordem'),
     filtrarEscopo(
       admin
         .from('aulas')
@@ -61,6 +66,7 @@ export async function listarConteudo(espacoId: string | null): Promise<ModuloLin
     titulo: m.titulo,
     descricao: m.descricao,
     ordem: m.ordem,
+    antesDaBase: m.antes_da_base,
     aulas: (aulas ?? [])
       .filter((a) => a.modulo_id === m.id)
       .map((a) => ({

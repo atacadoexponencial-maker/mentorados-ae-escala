@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
-import { podeGerenciarEspaco } from './autorizacao'
+import { podeGerenciarEspaco, podeMarcarAntesDaBase } from './autorizacao'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
 import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES } from '@/lib/upload'
 import { BUCKET_MATERIAIS, chaveDeArquivo } from '@/lib/materiais/regras'
@@ -62,16 +62,19 @@ export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): 
   if (!(await conteudoNoEscopo('modulos', moduloId, escopo))) return
   const admin = createAdminClient()
 
-  // Reordena dentro do espaço do próprio módulo (base ou de um mentorado).
+  // Reordena dentro do espaço do próprio módulo (base ou de um mentorado) e do mesmo
+  // grupo: as setas não tiram um módulo de "antes da base" nem o põem lá.
   const { data: alvoMod } = await admin
     .from('modulos')
-    .select('espaco_id')
+    .select('espaco_id, antes_da_base')
     .eq('id', moduloId)
     .single()
   const { data: modulos } = await filtrarEscopo(
     admin.from('modulos').select('id, ordem'),
     alvoMod?.espaco_id ?? null
-  ).order('ordem')
+  )
+    .eq('antes_da_base', alvoMod?.antes_da_base ?? false)
+    .order('ordem')
   if (!modulos) return
 
   const indice = modulos.findIndex((m: { id: string }) => m.id === moduloId)
@@ -81,6 +84,24 @@ export async function moverModulo(moduloId: string, direcao: 'cima' | 'baixo'): 
   const atual = modulos[indice]
   await admin.from('modulos').update({ ordem: vizinho.ordem }).eq('id', atual.id)
   await admin.from('modulos').update({ ordem: atual.ordem }).eq('id', vizinho.id)
+
+  revalidarConteudo()
+}
+
+// Só o admin coloca (ou tira) um módulo de marca antes do conteúdo base.
+export async function definirAntesDaBase(moduloId: string, antesDaBase: boolean): Promise<void> {
+  const escopo = await exigirEscopoConteudo()
+  if (!escopo) return
+  const admin = createAdminClient()
+
+  const { data: modulo } = await admin
+    .from('modulos')
+    .select('espaco_id')
+    .eq('id', moduloId)
+    .maybeSingle()
+  if (!modulo || !podeMarcarAntesDaBase(escopo, modulo.espaco_id)) return
+
+  await admin.from('modulos').update({ antes_da_base: antesDaBase }).eq('id', moduloId)
 
   revalidarConteudo()
 }

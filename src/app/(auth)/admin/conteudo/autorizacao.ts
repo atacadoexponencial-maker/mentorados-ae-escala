@@ -11,3 +11,12 @@ export function podeGerenciarEspaco(
   if (escopo.ehAdmin) return true
   return (alvoEspacoId ?? null) === escopo.espacoId
 }
+
+// Colocar um módulo antes do conteúdo base é decisão só do admin, e só vale
+// para módulo de um espaço (a base não tem "antes da base").
+export function podeMarcarAntesDaBase(
+  escopo: EscopoConteudo,
+  moduloEspacoId: string | null
+): boolean {
+  return escopo.ehAdmin && (moduloEspacoId ?? null) !== null
+}
