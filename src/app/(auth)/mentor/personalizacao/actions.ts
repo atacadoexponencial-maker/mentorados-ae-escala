@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo } from '@/app/(auth)/admin/conteudo/escopo'
 import { podeSalvarPersonalizacao } from './autorizacao'
-import { validarImagem, ehUuid, LIMITES } from '@/lib/upload'
+import { validarImagem, ehUuid, LIMITES, urlComVersao } from '@/lib/upload'
 
 export type EstadoPersonalizacao = { ok: boolean; erro: string | null }
 
@@ -76,7 +76,7 @@ export async function salvarPersonalizacao(
     const {
       data: { publicUrl },
     } = admin.storage.from('conteudo').getPublicUrl(caminho)
-    atualizacao.logo_url = publicUrl
+    atualizacao.logo_url = urlComVersao(publicUrl)
   }
 
   if (removerBanner) {
@@ -104,7 +104,7 @@ export async function salvarPersonalizacao(
     const {
       data: { publicUrl },
     } = admin.storage.from('conteudo').getPublicUrl(caminho)
-    atualizacao.banner_url = publicUrl
+    atualizacao.banner_url = urlComVersao(publicUrl)
   }
 
   const { error } = await admin.from('espacos').update(atualizacao).eq('id', espacoAlvo)

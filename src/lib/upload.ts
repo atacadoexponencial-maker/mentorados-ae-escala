@@ -109,3 +109,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export function ehUuid(valor: string): boolean {
   return UUID.test(valor)
 }
+
+// URL pública com versão: o upload sobrescreve o mesmo caminho, então sem isto
+// o navegador e o CDN seguem servindo a imagem antiga por até 1h (max-age=3600).
+// O Storage ignora a query string; quem localiza o arquivo usa o caminho.
+export function urlComVersao(publicUrl: string, agora: number = Date.now()): string {
+  return `${publicUrl}?v=${agora}`
+}

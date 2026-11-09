@@ -5,7 +5,7 @@ import { createAdminClient } from '@/integrations/supabase/admin'
 import { exigirEscopoConteudo, filtrarEscopo, conteudoNoEscopo } from './escopo'
 import { podeGerenciarEspaco, podeMarcarAntesDaBase } from './autorizacao'
 import { garantirPastaModulo, criarSlotUpload, propriedadesVideo } from '@/integrations/panda/server'
-import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES } from '@/lib/upload'
+import { validarImagem, contentTypeDeMaterial, ehUuid, LIMITES, urlComVersao } from '@/lib/upload'
 import { BUCKET_MATERIAIS, chaveDeArquivo } from '@/lib/materiais/regras'
 
 export type EstadoConteudo = { ok: boolean; erro: string | null }
@@ -201,7 +201,7 @@ export async function definirCapa(
     data: { publicUrl },
   } = admin.storage.from('conteudo').getPublicUrl(caminho)
 
-  const { error } = await admin.from('aulas').update({ capa_url: publicUrl }).eq('id', aulaId)
+  const { error } = await admin.from('aulas').update({ capa_url: urlComVersao(publicUrl) }).eq('id', aulaId)
   if (error) {
     return { ok: false, erro: 'Não foi possível salvar a capa.' }
   }
@@ -262,7 +262,7 @@ export async function salvarCapaNoEspaco(
 
   const { error } = await admin
     .from('aula_capas_espaco')
-    .upsert({ aula_id: aulaId, espaco_id: espacoId, capa_url: publicUrl })
+    .upsert({ aula_id: aulaId, espaco_id: espacoId, capa_url: urlComVersao(publicUrl) })
   if (error) {
     return { ok: false, erro: 'Não foi possível salvar a capa.' }
   }
